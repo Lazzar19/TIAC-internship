@@ -16,39 +16,60 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet] // get all 
-    public async Task<ActionResult<Product>> GetAll()
+    public async Task<ActionResult<IEnumerable<ProductDTO>>> GetAll()
     {
         var allProducts = await productRepository_.GetAllAsync();
-        return Ok(allProducts);
+        return Ok(allProducts.Select(ToDtO));
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Product>> GetById(int id)
+    public async Task<ActionResult<ProductDTO>> GetById(int id)
     {
         Product prod = await productRepository_.GetByIDAsync(id);
-        return prod is null ? NotFound() : Ok(prod); // just checking if there is actually a prod
+        return prod is null ? NotFound() : Ok(ToDtO(prod)); // just checking if there is actually a prod
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> Post(Product prod)
+    public async Task<ActionResult<Product>> Post(CreatedProductDTO prod)
     {
-        prod.ID = 0;
-        await productRepository_.AddAsync(prod);
-        return CreatedAtAction(nameof(GetById), new { id = prod.ID }, prod);
+        var newProduct = new Product
+        {
+            Name = prod.Name,
+            Description = prod.Description,
+            Price = prod.Price,
+            Stock = prod.Stock,
+
+        };
+        
+        await productRepository_.AddAsync(newProduct);
+        return CreatedAtAction(nameof(GetById), new { id = newProduct.ID }, ToDtO(newProduct));
+        
     }
     
     [HttpPut("{id}")]
-    public async Task<ActionResult<Product>> Put(int id, Product prod)
+    public async Task<IActionResult> Put(int id, UpdateProductDTO prod)
     {
-        if (id != prod.ID)
-            return BadRequest();
-
-        var existing = await productRepository_.GetByIDAsync(id);
-        if (existing is null) return NotFound(); // failed to fatch
-
-        await productRepository_.UpdateAsync(prod);
+        var already_existing = await productRepository_.GetByIDAsync(id);
+        if(already_existing is null) return NotFound();
+        
+        already_existing.Name = prod.Name;
+        already_existing.Description = prod.Description;
+        already_existing.Price = prod.Price;
+        already_existing.Stock = prod.Stock;
+        
+        await productRepository_.UpdateAsync(already_existing);
         return NoContent();
 
     }
-    
+
+    public static ProductDTO ToDtO(Product prod) => new()
+    {
+        Id = prod.ID,
+        Name = prod.Name,
+        Description = prod.Description,
+        Price = prod.Price,
+        Stock = prod.Stock,
+        CreatedAt = prod.CreatedAt
+    };
+
 }

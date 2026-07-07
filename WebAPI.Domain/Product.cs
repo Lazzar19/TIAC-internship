@@ -12,4 +12,6 @@ public class Product
     public int Stock { get; set; }
     public DateTime CreatedAt { get; set; }
     
+    //public string Code { get; set; } = string.Empty;
+    
 }
