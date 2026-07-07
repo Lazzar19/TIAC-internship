@@ -18,11 +18,15 @@ public class ProductRepository : IProductRepository
         await dbContext_.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(Product prod)
+    public async Task UpdateAsync(Product prod)
     {
         dbContext_.Products.Update(prod);
-        
+        await dbContext_.SaveChangesAsync();
     }
-    
-    
+
+    public async  Task DeleteAsync(int id)
+    {
+        dbContext_.Products.Remove(await dbContext_.Products.FindAsync(id));
+        await dbContext_.SaveChangesAsync();
+    }
 }
