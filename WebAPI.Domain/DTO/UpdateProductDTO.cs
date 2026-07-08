@@ -2,6 +2,7 @@
 
 public class UpdateProductDTO
 {
+    // update can be done on every field except ID and CreateAt
     public string Name { get; set; } = String.Empty;
     public string? Description { get; set; }
     public decimal Price { get; set; }

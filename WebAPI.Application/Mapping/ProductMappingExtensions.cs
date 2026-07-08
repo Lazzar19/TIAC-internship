@@ -1,5 +1,5 @@
-﻿namespace WebAPI.Domain;
-
+﻿using WebAPI.Domain;
+namespace WebAPI.Application;
 public static  class ProductMappingExtensions
 {
     public static ProductDTO ToDTO(this Product product)

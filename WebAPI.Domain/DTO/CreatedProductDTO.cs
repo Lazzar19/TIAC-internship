@@ -2,6 +2,8 @@
 
 public class CreatedProductDTO
 {
+    // data base automatically incrementing userID  
+    
     public string  Name {get; set;} = String.Empty;
     public string? Description { get; set; }
     public decimal Price {get; set;}
