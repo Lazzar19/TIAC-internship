@@ -19,30 +19,23 @@ public class ProductController : ControllerBase
     public async Task<ActionResult<IEnumerable<ProductDTO>>> GetAll()
     {
         var allProducts = await productRepository_.GetAllAsync();
-        return Ok(allProducts.Select(ToDtO));
+        return Ok(allProducts.Select(p => p.ToDTO()));
     }
 
     [HttpGet("{id}")]
     public async Task<ActionResult<ProductDTO>> GetById(int id)
     {
         Product prod = await productRepository_.GetByIDAsync(id);
-        return prod is null ? NotFound() : Ok(ToDtO(prod)); // just checking if there is actually a prod
+        return prod is null ? NotFound() : Ok(prod.ToDTO()); // just checking if there is actually a prod
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> Post(CreatedProductDTO prod)
+    public async Task<ActionResult<ProductDTO>> Post(CreatedProductDTO prodDTO)
     {
-        var newProduct = new Product
-        {
-            Name = prod.Name,
-            Description = prod.Description,
-            Price = prod.Price,
-            Stock = prod.Stock,
-
-        };
+       var product = prodDTO.ToEntity();
         
-        await productRepository_.AddAsync(newProduct);
-        return CreatedAtAction(nameof(GetById), new { id = newProduct.ID }, ToDtO(newProduct));
+        await productRepository_.AddAsync(product);
+        return CreatedAtAction(nameof(GetById), new { id = product.ID }, product.ToDTO());
         
     }
     
@@ -62,14 +55,6 @@ public class ProductController : ControllerBase
 
     }
 
-    public static ProductDTO ToDtO(Product prod) => new()
-    {
-        Id = prod.ID,
-        Name = prod.Name,
-        Description = prod.Description,
-        Price = prod.Price,
-        Stock = prod.Stock,
-        CreatedAt = prod.CreatedAt
-    };
+   
 
 }
