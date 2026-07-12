@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WebAPI.Application;
+using WebAPI.Application.Validators;
 using WebAPI.Infrastructure;
 
 
@@ -16,6 +17,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // DI registracija
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserProductRepository, UserProductRepository>();
 
 builder.Services.AddOpenApi();
 
