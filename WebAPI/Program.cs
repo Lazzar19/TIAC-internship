@@ -1,6 +1,9 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using WebAPI.Application;
 using WebAPI.Application.Validators;
+using WebAPI.Domain;
 using WebAPI.Infrastructure;
 
 
@@ -19,6 +22,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserProductRepository, UserProductRepository>();
+
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateProductDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateProductDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<AssignProductToUserDTOValidator>();
+
+
 
 builder.Services.AddOpenApi();
 

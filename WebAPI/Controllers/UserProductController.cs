@@ -7,13 +7,14 @@ using WebAPI.Domain;
 
 using Microsoft.AspNetCore.Mvc;
 
-
+[ApiController]
+[Route("api/users/{userId}/products")]
 public class UserProductController : ControllerBase
 {
 
-    private readonly UserProductRepository userProductRepository_;
+    private readonly IUserProductRepository userProductRepository_;
 
-    public UserProductController(UserProductRepository userProductRepository)
+    public UserProductController(IUserProductRepository userProductRepository)
     {
         userProductRepository_ = userProductRepository;
     }

@@ -4,11 +4,11 @@ using WebAPI.Domain;
 namespace WebAPI.Application.Validators;
 
 
-internal sealed class CreateProductDTOValidator : AbstractValidator<CreatedProductDTO>
+public sealed class CreateProductDTOValidator : AbstractValidator<CreatedProductDTO>
 {
    public CreateProductDTOValidator()
    {
-      RuleFor(x => x.Name).NotEmpty().WithMessage("Name cannot be empty")
+      RuleFor(x => x.Name).NotEmpty().WithMessage("Name is required")
          .MaximumLength(30).WithMessage("Name of product can not be longer than 30 characters");
 
       RuleFor(x => x.Price).GreaterThan(0).WithMessage("Price must be higher then zero");
