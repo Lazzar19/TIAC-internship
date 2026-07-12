@@ -8,7 +8,7 @@ public class User
     public string Email {get; set;} =  string.Empty;
     public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
     
-    public ICollection<Product> UserProducts {get; set;} = new List<Product>();
+    public ICollection<UserProduct> UserProducts {get; set;} = new List<UserProduct>();
     
     
 }
