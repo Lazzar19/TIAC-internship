@@ -53,6 +53,10 @@ public class UserController : ControllerBase
         return CreatedAtAction(nameof(GetAsync), new { id = newUser.ID }, newUser);
     }
 
+    
+    
+    
+    
     [HttpPut("{id}")]
 
     public async Task<IActionResult> UpdateAsync(int id, UpdateUserDTO dto)
@@ -67,6 +71,26 @@ public class UserController : ControllerBase
         return NoContent();
     }
 
+    
+    [HttpPut("{id}/password")]
+
+    public async Task<IActionResult> ChangePasswordAsync(int id, ChangePasswordDTO dto)
+    {
+        var user_ = await userRepository_.GetByIDAsync(id);
+        if (user_ is null) return NotFound();
+
+        if (user_.PasswordHash != dto.CurrentPassword)
+        {
+            return BadRequest("Current password is incorrect");
+        }
+        
+        user_.PasswordHash = dto.NewPassword;
+        
+        await  userRepository_.UpdateAsync(user_);
+        return NoContent();
+    }
+    
+    
     [HttpDelete("{id}")]
 
     public async Task<IActionResult> DeleteAsync(int id)

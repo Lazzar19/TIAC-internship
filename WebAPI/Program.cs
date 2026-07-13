@@ -30,6 +30,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<UpdateProductDTOValidator>(
 builder.Services.AddValidatorsFromAssemblyContaining<CreateUserDTOValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserDTOValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<AssignProductToUserDTOValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordDTOValidator>();
 
 
 
