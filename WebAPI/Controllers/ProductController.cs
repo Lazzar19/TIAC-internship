@@ -1,4 +1,6 @@
-﻿namespace WebAPI.Controllers;
+﻿using Microsoft.AspNetCore.Authorization;
+
+namespace WebAPI.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Application;
@@ -6,6 +8,7 @@ using WebAPI.Domain;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ProductController : ControllerBase
 {
     private readonly IProductRepository productRepository_;
@@ -16,16 +19,26 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet] // get all 
-    public async Task<ActionResult<IEnumerable<ProductDTO>>> GetAll()
+    public async Task<ActionResult<PageResult<ProductDTO>>> GetAll([FromQuery] ProductQuerryParametars querryParametars)
     {
-        var allProducts = await productRepository_.GetAllAsync();
-        return Ok(allProducts.Select(p => p.ToDTO()));
+        var result = await productRepository_.GetAllAsync(querryParametars);
+
+        var DTOresult = new PageResult<ProductDTO>
+        {
+            Items = result.Items.Select(p => p.ToDTO()),
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalCount = result.TotalCount
+        };
+
+        return Ok(DTOresult);
     }
+   
 
     [HttpGet("{id}")]
     public async Task<ActionResult<ProductDTO>> GetById(int id)
     {
-        Product prod = await productRepository_.GetByIDAsync(id);
+        var prod = await productRepository_.GetByIDAsync(id);
         return prod is null ? NotFound() : Ok(prod.ToDTO()); // just checking if there is actually a prod
     }
 

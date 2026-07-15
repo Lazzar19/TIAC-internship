@@ -1,4 +1,5 @@
-﻿using WebAPI.Application;
+﻿using Microsoft.AspNetCore.Authorization;
+using WebAPI.Application;
 using WebAPI.Application.Validators;
 
 namespace WebAPI.Controllers;
@@ -10,6 +11,7 @@ using WebAPI.Infrastructure;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 
 public class UserController : ControllerBase
 {
@@ -24,7 +26,7 @@ public class UserController : ControllerBase
 
     [HttpGet]
 
-    public async Task<ActionResult<IEnumerable<UserDTO>>> GetAllAsync()
+    public async Task<ActionResult<IEnumerable<UserDTO>>> GetAll()
     {
         var users = await userRepository_.GetAllAsync();
         return Ok(users.Select(u => u.ToDTO()));
@@ -32,15 +34,14 @@ public class UserController : ControllerBase
 
     [HttpGet("{id}")]
 
-    public async Task<ActionResult<UserDTO>> GetAsync(int id)
+    public async Task<ActionResult<UserDTO>> GetById(int id)
     {
         var user = await userRepository_.GetByIDAsync(id);
         return user is null ? NotFound() : Ok(user.ToDTO());
     }
 
     [HttpPost]
-
-    public async Task<ActionResult<UserDTO>> AddAsync(CreateUserDTO dto)
+    public async Task<ActionResult<UserDTO>> Post(CreateUserDTO dto)
     {
         var newUser = new User
         {
@@ -50,16 +51,13 @@ public class UserController : ControllerBase
         };
 
         await userRepository_.AddAsync(newUser);
-        return CreatedAtAction(nameof(GetAsync), new { id = newUser.ID }, newUser);
+        return CreatedAtAction(nameof(GetById), new { id = newUser.ID }, newUser.ToDTO());
     }
-
-    
-    
     
     
     [HttpPut("{id}")]
 
-    public async Task<IActionResult> UpdateAsync(int id, UpdateUserDTO dto)
+    public async Task<IActionResult> Put(int id, UpdateUserDTO dto)
     {
         var alreadyExisting = await userRepository_.GetByIDAsync(id);
         if (alreadyExisting is null) return NotFound();
@@ -76,17 +74,17 @@ public class UserController : ControllerBase
 
     public async Task<IActionResult> ChangePasswordAsync(int id, ChangePasswordDTO dto)
     {
-        var user_ = await userRepository_.GetByIDAsync(id);
-        if (user_ is null) return NotFound();
+        var user = await userRepository_.GetByIDAsync(id);
+        if (user is null) return NotFound();
 
-        if (user_.PasswordHash != dto.CurrentPassword)
+        if (user.PasswordHash != dto.CurrentPassword)
         {
             return BadRequest("Current password is incorrect");
         }
         
-        user_.PasswordHash = dto.NewPassword;
+        user.PasswordHash = dto.NewPassword;
         
-        await  userRepository_.UpdateAsync(user_);
+        await  userRepository_.UpdateAsync(user);
         return NoContent();
     }
     

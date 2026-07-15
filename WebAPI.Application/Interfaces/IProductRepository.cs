@@ -5,7 +5,7 @@ namespace WebAPI.Application;
 public interface IProductRepository
 {
        
-    Task<IEnumerable<Product>> GetAllAsync(); // 
+    Task<PageResult<Product>> GetAllAsync(ProductQuerryParametars queryParametars);  
     Task<Product?> GetByIDAsync(int id); // Product? can be null 
     Task AddAsync(Product prod); // post 
     Task UpdateAsync(Product prod); // put 

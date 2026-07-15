@@ -9,7 +9,35 @@ public class ProductRepository : IProductRepository
     
     public ProductRepository(ApplicationDbContext dbContext) { dbContext_ = dbContext; }
 
-    public async Task<IEnumerable<Product>> GetAllAsync() => await dbContext_.Products.ToListAsync();
+    public async Task<PageResult<Product>> GetAllAsync(ProductQuerryParametars queryParametars)
+    {
+
+        var query = dbContext_.Products.AsQueryable();
+        
+        if(!string.IsNullOrWhiteSpace(queryParametars.Search))
+            query = query.Where(p => p.Name.Contains(queryParametars.Search));
+        
+        if(queryParametars.MinPrice.HasValue)
+            query = query.Where(p => p.Price >= queryParametars.MinPrice.Value);
+        
+        if(queryParametars.MaxPrice.HasValue)
+            query = query.Where(p => p.Price <= queryParametars.MaxPrice.Value);
+        
+        var count =  await query.CountAsync();
+
+        var items = await query.Skip((queryParametars.PageNumber - 1) * queryParametars.PageSize)
+            .Take(queryParametars.PageSize).ToListAsync();
+
+        return new PageResult<Product>
+        {
+            Items = items,
+            PageNumber = queryParametars.PageNumber,
+            PageSize = queryParametars.PageSize,
+            TotalCount = count
+        };
+
+
+    }
     public async Task<Product?> GetByIDAsync(int id) => await dbContext_.Products.FindAsync(id);
 
     public async Task AddAsync(Product product)

@@ -1,4 +1,5 @@
-﻿using WebAPI.Application;
+﻿using Microsoft.AspNetCore.Authorization;
+using WebAPI.Application;
 
 namespace WebAPI.Controllers;
 
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/users/{userId}/products")]
+[Authorize]
 public class UserProductController : ControllerBase
 {
 

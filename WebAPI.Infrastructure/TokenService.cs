@@ -35,13 +35,13 @@ public class TokenService : ITokenService
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-        var token_ = new JwtSecurityToken(issuer: jwtSettings["Issuer"],
+        var token = new JwtSecurityToken(issuer: jwtSettings["Issuer"],
             audience: jwtSettings["Audience"],
             claims: claims,
             expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: cred);
         
-        return new JwtSecurityTokenHandler().WriteToken(token_);
+        return new JwtSecurityTokenHandler().WriteToken(token);
 
     }
     

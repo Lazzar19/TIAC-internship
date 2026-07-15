@@ -2,13 +2,14 @@
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
 
+
 namespace WebAPI.Controllers;
 
 using WebAPI.Domain;
 using WebAPI.Application;
 
 [ApiController]
-[Route("api/[controller")]
+[Route("api/[controller]")]
 
 
 public class AuthController : ControllerBase
@@ -48,8 +49,8 @@ public class AuthController : ControllerBase
     {
         var allUsers_ = await userRepository_.GetAllAsync();
         var user_ = allUsers_.FirstOrDefault(u => u.Email == dto.Email);
-
-        if (user_ == null || !passwordHasher_.Verify(dto.Password, user_.PasswordHash))
+        
+        if (user_ == null || !passwordHasher_.Verify(user_.PasswordHash, dto.Password))
             return Unauthorized("Invalid email or password");
 
         var token_ = tokenService_.GenerateToken(user_);
