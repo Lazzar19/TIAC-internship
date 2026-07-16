@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using WebAPI.Application;
 using WebAPI.Application.Validators;
+using WebAPI.Application.Interfaces;
 
 namespace WebAPI.Controllers;
 
@@ -17,10 +19,12 @@ public class UserController : ControllerBase
 {
 
     private readonly IUserRepository userRepository_;
-
-    public UserController(IUserRepository userRepository)
+    private readonly IPasswordHasher passwordHasher_;
+    
+    public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher)
     {
         userRepository_ = userRepository;
+        passwordHasher_ = passwordHasher;
     }
 
 
@@ -47,7 +51,7 @@ public class UserController : ControllerBase
         {
             Username = dto.Username,
             Email = dto.Email,
-            PasswordHash = dto.Password // just plain text, JWT will do the hashing 
+            PasswordHash = passwordHasher_.Hash(dto.Password) 
         };
 
         await userRepository_.AddAsync(newUser);
@@ -77,12 +81,12 @@ public class UserController : ControllerBase
         var user = await userRepository_.GetByIDAsync(id);
         if (user is null) return NotFound();
 
-        if (user.PasswordHash != dto.CurrentPassword)
+        if (!passwordHasher_.Verify(user.PasswordHash, dto.CurrentPassword))
         {
             return BadRequest("Current password is incorrect");
         }
         
-        user.PasswordHash = dto.NewPassword;
+        user.PasswordHash = passwordHasher_.Hash(dto.NewPassword);
         
         await  userRepository_.UpdateAsync(user);
         return NoContent();

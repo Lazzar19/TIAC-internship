@@ -24,26 +24,26 @@ public class UserProductController : ControllerBase
 
     [HttpGet]
 
-    public async Task<ActionResult<IEnumerable<UserProductDTO>>> GetByUserIDAsync(int userID)
+    public async Task<ActionResult<IEnumerable<UserProductDTO>>> GetByUserIDAsync(int userId)
     {
-        var items = await userProductRepository_.GetByUserIDAsync(userID);
+        var items = await userProductRepository_.GetByUserIDAsync(userId);
         return Ok(items.Select(up => up.ToDTO()));
     }
 
     [HttpPost]
 
-    public async Task<ActionResult<UserProductDTO>> Assign(int userID, AsigningUserToProductDTO dto)
+    public async Task<ActionResult<UserProductDTO>> Assign(int userId, AsigningUserToProductDTO dto)
     {
         var userProduct = new UserProduct
         {
-            UserID = userID,
+            UserID = userId,
             ProductID = dto.ProductID,
             NumberOfProducts = dto.Quantity
         };
         
         await userProductRepository_.AddOrUpdateAsync(userProduct);
 
-        var result = await userProductRepository_.GetAsync(userID, dto.ProductID);
+        var result = await userProductRepository_.GetAsync(userId, dto.ProductID);
         return Ok(result.ToDTO());
 
     }
@@ -51,9 +51,9 @@ public class UserProductController : ControllerBase
 
     [HttpDelete("{productId}")]
 
-    public async Task<IActionResult> DeleteAsync(int userID, int productID)
+    public async Task<IActionResult> DeleteAsync(int userId, int productID)
     {
-        var existing = await userProductRepository_.GetAsync(userID, productID);
+        var existing = await userProductRepository_.GetAsync(userId, productID);
         if (existing is null) return NotFound();
 
         await userProductRepository_.DeleteAsync(existing);
