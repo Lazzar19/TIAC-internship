@@ -26,9 +26,10 @@ public class Pbkdf2PasswordHasher : IPasswordHasher
         return $"{Convert.ToBase64String(salt)}-{Convert.ToBase64String(subkey)}";
     }
 
-    public bool Verify(string password, string hashedPassword)
+
+    public bool Verify(string hash, string password)
     {
-        var parts = hashedPassword.Split('-');
+        var parts = hash.Split('-');
         if (parts.Length != 2) return false;
 
         var salt = Convert.FromBase64String(parts[0]);
@@ -42,7 +43,6 @@ public class Pbkdf2PasswordHasher : IPasswordHasher
             outputLength: HashSize);
 
         return CryptographicOperations.FixedTimeEquals(actualSubkey, expectedKey);
-        
     }
 
 }
