@@ -1,5 +1,11 @@
 ﻿namespace WebAPI.Domain;
 
+public enum Role
+{
+    User,
+    Admin
+}
+
 public class User
 {
     public int ID { get; set; }
@@ -7,7 +13,7 @@ public class User
     public string PasswordHash {get; set;}  = string.Empty;
     public string Email {get; set;} =  string.Empty;
     public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
-    
+    public Role Role { get; set; } = Role.User;
     public ICollection<UserProduct> UserProducts {get; set;} = new List<UserProduct>();
     
     

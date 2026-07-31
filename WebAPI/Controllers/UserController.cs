@@ -94,6 +94,7 @@ public class UserController : ControllerBase
     
     
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")] // so that only admin can delete users 
 
     public async Task<IActionResult> DeleteAsync(int id)
     {
