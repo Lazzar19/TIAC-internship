@@ -17,13 +17,15 @@ public class AuthController : ControllerBase
     private readonly IUserRepository userRepository_;
     private readonly IPasswordHasher passwordHasher_;
     private readonly ITokenService tokenService_;
+    private readonly IRefreshTokenRepository  refreshTokenRepository_;
 
 
-    public AuthController(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService)
+    public AuthController(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, IRefreshTokenRepository refreshTokenRepository)
     {
         userRepository_ = userRepository;
         passwordHasher_ = passwordHasher;
         tokenService_ = tokenService;
+        refreshTokenRepository_ = refreshTokenRepository;
     }
 
 
@@ -54,7 +56,46 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid email or password");
 
         var token_ = tokenService_.GenerateToken(user_);
-        return Ok(new AuthResponseDTO { Token = token_, Username = user_.Username });
+        var refreshTokenValue = tokenService_.GenerateRefreshToken();
+
+        var refreshToken = new RefreshToken
+        {
+            Token = refreshTokenValue,
+            UserId = user_.ID,
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        };
+        
+        await refreshTokenRepository_.AddAsync(refreshToken);
+
+        return Ok(new AuthResponseDTO
+        {
+            Token = token_,
+            RefreshToken = refreshTokenValue,
+            Username = user_.Username,
+        });
+
+    }
+
+
+    [HttpPost("refresh")]
+
+    public async Task<ActionResult<AuthResponseDTO>> Refresh(RefreshRequestDTO dto)
+    {
+        
+        var storedToken = await refreshTokenRepository_.GetByTokenAsync(dto.RefreshToken);
+
+        if (storedToken is null || storedToken.isRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
+            return Unauthorized("Invalid or expired refresh token");
+
+        var newToken = tokenService_.GenerateToken(storedToken.User);
+
+        return Ok(new AuthResponseDTO
+        {
+            Token = newToken,
+            RefreshToken = storedToken.Token,
+            Username = storedToken.User.Username
+        });
+
     }
     
     

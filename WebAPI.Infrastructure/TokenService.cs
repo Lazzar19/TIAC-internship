@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using System.Security.Cryptography;
+using Microsoft.IdentityModel.Tokens;
 using WebAPI.Application.Interfaces;
 
 namespace WebAPI.Infrastructure;
@@ -39,11 +40,16 @@ public class TokenService : ITokenService
         var token = new JwtSecurityToken(issuer: jwtSettings["Issuer"],
             audience: jwtSettings["Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(30),
             signingCredentials: cred);
         
         return new JwtSecurityTokenHandler().WriteToken(token);
 
     }
-    
+
+    public string GenerateRefreshToken()
+    {
+        var randByte = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randByte);
+    }
 }
