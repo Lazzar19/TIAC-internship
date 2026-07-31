@@ -18,7 +18,7 @@ public class Pbkdf2PasswordHasherTests
     public void Verify_Should_Return_True_For_Correct_Password()
     {
         var hash = hasher.Hash("password");
-        var result = hasher.Verify("password", hash);
+        var result = hasher.Verify(hash, "password");
         result.Should().BeTrue();
     }
 

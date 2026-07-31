@@ -1,13 +1,26 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+﻿
+#base stage 
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-RUN mkdir -p /app/data && chown -R $APP_UID /app/data
-USER $APP_UID
+RUN mkdir -p /app/data && chown -R $APP_UID /app/data 
+USER $APP_UID   
 EXPOSE 8080
 EXPOSE 8081
+
+# app can run on non-root user with $APP_UID
+
+# sdk contains compiler
+# dotnet/aspnet is just runtime image for running the application, there is no need for compiler in the final image
+
+
+# build stage 
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# docker layer caching for faster builds, restore doesn't need to be run if the csproj files haven't changed
 
 COPY ["WebAPI/WebAPI.csproj", "WebAPI/"]
 COPY ["WebAPI.Application/WebAPI.Application.csproj", "WebAPI.Application/"]

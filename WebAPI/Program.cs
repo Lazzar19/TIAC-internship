@@ -10,6 +10,7 @@ using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
 using WebAPI.Domain;
 using WebAPI.Infrastructure;
+using WebAPI.Middleware;
 
 
 
@@ -88,6 +89,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>(); // middleware exception handling 
 
 using (var scope = app.Services.CreateScope())
 {
