@@ -24,7 +24,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     public async Task Get_All_Products_Should_Return_Ok()
     {
         var response = await _client.GetAsync("/api/Product");
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

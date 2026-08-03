@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authentication;
 
 namespace WebAPI.Tests.Integration_Tests;
 
@@ -16,19 +17,36 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        //builder.UseEnvironment("IntegrationTesting");
 
         builder.ConfigureServices(services =>
         {
+            
             var descriptor =
                 services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
 
             if (descriptor != null)
                 services.Remove(descriptor);
+            
+            
+            var coreServiceDescriptors = services
+                .Where(d => d.ServiceType.FullName?.StartsWith("Microsoft.EntityFrameworkCore") == true)
+                .ToList();
 
+            foreach (var coreDescriptor in coreServiceDescriptors)
+            {
+                services.Remove(coreDescriptor);
+            }
+
+            // Add an in-memory database for testing
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase("IntegrationTestDB");
             });
+
+            // Dodati test autentifikaciju
+            services.AddAuthentication("TestScheme")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("TestScheme", options => { });
 
             var sp = services.BuildServiceProvider();
             using (var scope = sp.CreateScope())

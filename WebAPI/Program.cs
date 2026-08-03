@@ -93,10 +93,15 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>(); // middleware exception handling 
 
+
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.Migrate();
+    if (dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
+    {
+        dbContext.Database.Migrate();
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -113,7 +118,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.UseAuthorization();
 app.Run();
 
 
