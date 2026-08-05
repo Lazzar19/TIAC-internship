@@ -15,9 +15,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+    
+    private readonly string _dbName = $"IntegrationTestDB_{Guid.NewGuid()}";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        //builder.UseEnvironment("IntegrationTesting");
 
         builder.ConfigureServices(services =>
         {
@@ -38,13 +40,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(coreDescriptor);
             }
 
-            // Add an in-memory database for testing
+            // Add an in-memory database for testing - 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseInMemoryDatabase("IntegrationTestDB");
+                options.UseInMemoryDatabase(_dbName);
             });
 
-            // Dodati test autentifikaciju
+            
             services.AddAuthentication("TestScheme")
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("TestScheme", options => { });
 
