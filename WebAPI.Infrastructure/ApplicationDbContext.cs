@@ -15,6 +15,10 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
         
         modelBuilder.Entity<UserProduct>(entity =>
         {
@@ -29,7 +33,5 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(up => up.ProductID);
         });
     }
-    
-    
 
 }

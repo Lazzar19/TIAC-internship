@@ -33,7 +33,9 @@ public class UserRepository : IUserRepository
         dbContext_.Users.Remove(user);
         await dbContext_.SaveChangesAsync();
     }
-    
 
-
+    public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        return await dbContext_.Users.AnyAsync(u => u.Email == email, cancellationToken);
+    }
 }

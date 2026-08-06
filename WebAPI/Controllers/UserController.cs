@@ -47,6 +47,11 @@ public class UserController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<UserDTO>> Post(CreateUserDTO dto)
     {
+        if (await userRepository_.EmailExistsAsync(dto.Email))
+        {
+            return Conflict("Email already exists.");
+        }
+
         var newUser = new User
         {
             Username = dto.Username,
@@ -65,6 +70,12 @@ public class UserController : ControllerBase
     {
         var alreadyExisting = await userRepository_.GetByIDAsync(id);
         if (alreadyExisting is null) return NotFound();
+
+        if (!string.Equals(alreadyExisting.Email, dto.Email, StringComparison.OrdinalIgnoreCase) &&
+            await userRepository_.EmailExistsAsync(dto.Email))
+        {
+            return Conflict("Email already exists.");
+        }
 
         alreadyExisting.Username = dto.UserName;
         alreadyExisting.Email = dto.Email;

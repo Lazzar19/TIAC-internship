@@ -106,8 +106,8 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [Fact(Skip = "Backend do not  validate duplicate of email - should be fixed later")]
-    public async Task Create_User_With_Duplicate_Email_Should_Return_Conflict()
+    [Fact]
+    public async Task Create_User_With_Duplicate_Email_Should_Return_BadRequest()
     {
         var email = UniqueEmail();
         var createUserDto = new CreateUserDTO
@@ -130,7 +130,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var second = await _client.PostAsync("/api/User", ToJsonContent(duplicateDto));
         
-        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
     }
 
     [Fact]
-    public async Task Change_Password_With_Valid_Data_Should_Return_NoContent()
+    public async Task Change_Password_With_Valid_DATA_Should_Return_NoContent()
     {
        
         var createUserDto = new CreateUserDTO
@@ -218,7 +218,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
     }
 
     [Fact]
-    public async Task Change_Password_With_Wrong_Current_PASSWORD_Should_Return_BadRequest()
+    public async Task Change_Password_With_Wrong_CURRENT_PASSWORD_Should_Return_BadRequest()
     {
         
         var createUserDto = new CreateUserDTO

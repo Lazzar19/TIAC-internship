@@ -8,5 +8,6 @@ public interface IUserRepository
     Task AddAsync(User user);
     Task UpdateAsync(User user);
     Task DeleteAsync(User user);
+    Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default);
 
 }

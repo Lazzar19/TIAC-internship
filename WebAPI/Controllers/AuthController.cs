@@ -33,6 +33,11 @@ public class AuthController : ControllerBase
 
     public async Task<ActionResult<UserDTO>> Register(CreateUserDTO dto)
     {
+        if (await userRepository_.EmailExistsAsync(dto.Email))
+        {
+            return Conflict("Email already exists.");
+        }
+
         var user =  new User
         {
             Username = dto.Username,
