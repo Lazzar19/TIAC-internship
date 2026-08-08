@@ -54,8 +54,7 @@ public class AuthController : ControllerBase
 
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {
-        var allUsers_ = await userRepository_.GetAllAsync();
-        var user_ = allUsers_.FirstOrDefault(u => u.Email == dto.Email);
+        var user_ = await userRepository_.GetByEmailAsync(dto.Email);
         
         if (user_ == null || !passwordHasher_.Verify(user_.PasswordHash, dto.Password))
             return Unauthorized("Invalid email or password");
@@ -86,21 +85,48 @@ public class AuthController : ControllerBase
 
     public async Task<ActionResult<AuthResponseDTO>> Refresh(RefreshRequestDTO dto)
     {
-        
         var storedToken = await refreshTokenRepository_.GetByTokenAsync(dto.RefreshToken);
 
-        if (storedToken is null || storedToken.isRevoked || storedToken.ExpiresAt < DateTime.UtcNow)
+        if (storedToken is null || storedToken.IsRevoked || storedToken.IsExpired)
             return Unauthorized("Invalid or expired refresh token");
 
+        // Token rotation: revoke old token
+        await refreshTokenRepository_.RevokeAsync(storedToken);
+
+        // Generate new token pair
         var newToken = tokenService_.GenerateToken(storedToken.User);
+        var newRefreshTokenValue = tokenService_.GenerateRefreshToken();
+
+        var newRefreshToken = new RefreshToken
+        {
+            Token = newRefreshTokenValue,
+            UserId = storedToken.UserId,
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        };
+
+        await refreshTokenRepository_.AddAsync(newRefreshToken);
 
         return Ok(new AuthResponseDTO
         {
             Token = newToken,
-            RefreshToken = storedToken.Token,
+            RefreshToken = newRefreshTokenValue,
             Username = storedToken.User.Username
         });
+    }
 
+    [HttpPost("logout")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> Logout()
+    {
+        var userId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
+        
+        if (userId == 0)
+            return BadRequest("Invalid user token");
+
+        // Revoke all refresh tokens for this user
+        await refreshTokenRepository_.RevokeAllByUserIdAsync(userId);
+
+        return NoContent();
     }
     
     
