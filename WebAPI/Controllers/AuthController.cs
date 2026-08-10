@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
 
@@ -51,6 +52,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
 
     public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)
     {
@@ -82,6 +84,7 @@ public class AuthController : ControllerBase
 
 
     [HttpPost("refresh")]
+    [EnableRateLimiting("auth")]
 
     public async Task<ActionResult<AuthResponseDTO>> Refresh(RefreshRequestDTO dto)
     {

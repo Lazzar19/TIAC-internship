@@ -5,6 +5,7 @@ riderModule.iml
 /_ReSharper.Caches/
 
 .env
+.idea/
 
 *.db
 *.db-shm
