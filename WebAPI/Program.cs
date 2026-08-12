@@ -14,18 +14,19 @@ using WebAPI.Infrastructure;
 using WebAPI.Middleware;
 using Serilog;
 
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .CreateBootstrapLogger();
 
-try
-{
-    Log.Information("Starting WebAPI");
 
     var builder = WebApplication.CreateBuilder(args);
+    
+    
+
+    builder.Host.UseSerilog((context, service, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(service)
+        .Enrich.FromLogContext()
+        .WriteTo.Console());
+    
+    
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
@@ -152,16 +153,6 @@ try
 
     app.MapControllers();
     app.Run();
-
-}
-catch (Exception e)
-{
-    Log.Fatal(e, "WebAPI terminated");
-}
-finally
-{
-    Log.CloseAndFlush();
-}
 
 
 
