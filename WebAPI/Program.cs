@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -56,6 +57,9 @@ using Serilog;
     // database  
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<ApplicationDbContext>(name: "database");
 
 
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -152,6 +156,7 @@ using Serilog;
     app.UseAuthorization();
 
     app.MapControllers();
+    app.MapHealthChecks("/health");
     app.Run();
 
 
