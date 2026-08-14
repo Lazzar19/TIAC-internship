@@ -110,7 +110,7 @@ using Serilog;
                 factory: _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 5,
-                    Window = TimeSpan.FromMinutes(3),
+                    Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
     });
