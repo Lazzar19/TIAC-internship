@@ -1,6 +1,5 @@
 using System.Text;
 using System.Threading.RateLimiting;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,7 +9,6 @@ using Microsoft.OpenApi;
 using WebAPI.Application;
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
-using WebAPI.Domain;
 using WebAPI.Infrastructure;
 using WebAPI.Middleware;
 using Serilog;
@@ -54,9 +52,9 @@ using Serilog;
     });
 
 
-    // database  
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    // database
+    builder.Services.AddDatabase(builder.Configuration);
+    builder.Services.AddApplicationCache(builder.Configuration);
 
     builder.Services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
@@ -135,9 +133,13 @@ using Serilog;
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        if (dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
+        var providerName = dbContext.Database.ProviderName;
+        if (providerName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            dbContext.Database.Migrate();
+            dbContext.Database.EnsureCreated();
+        } else if(providerName != "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            dbContext.Database.Migrate(); // postgres production
         }
     }
 
