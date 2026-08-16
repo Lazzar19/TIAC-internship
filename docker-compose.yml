@@ -4,16 +4,27 @@
       context: .
       dockerfile: Dockerfile
     container_name: webapi
+    depends_on:
+      - redis
     ports:
       - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/webapi.db
+      - Redis__Configuration=redis:6379,abortConnect=false
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=WebAPI
       - Jwt__Audience=WebAPIUsers
     volumes:
       - webapi-data:/app/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: webapi-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
 volumes:
   webapi-data:
+  redis-data:
