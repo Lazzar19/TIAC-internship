@@ -34,18 +34,18 @@ public class UserProductController : ControllerBase
 
     public async Task<ActionResult<UserProductDTO>> Assign(int userId, AsigningUserToProductDTO dto)
     {
-        var userProduct = new UserProduct
+        var result = await userProductRepository_.AssignAsync(userId, dto.ProductID, dto.Quantity);
+
+        switch (result)
         {
-            UserID = userId,
-            ProductID = dto.ProductID,
-            NumberOfProducts = dto.Quantity
-        };
-        
-        await userProductRepository_.AddOrUpdateAsync(userProduct);
-
-        var result = await userProductRepository_.GetAsync(userId, dto.ProductID);
-        return Ok(result.ToDTO());
-
+            case AssignProductResult.ProductNotFound:
+                return NotFound($"Product with ID: {dto.ProductID} cannot be found");
+            
+            case AssignProductResult.InsufficientStock:
+                return BadRequest($"Product with ID: {dto.ProductID} has insufficient stock");
+        }
+        var userProduct = await userProductRepository_.GetAsync(userId, dto.ProductID);
+        return Ok(userProduct!.ToDTO());
     }
 
 

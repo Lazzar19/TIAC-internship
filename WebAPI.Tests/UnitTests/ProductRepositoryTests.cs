@@ -2,7 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Hosting.Internal;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using WebAPI.Infrastructure;
 
 namespace WebAPI.Tests;
@@ -21,9 +25,12 @@ public class ProductRepositoryTests
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
-        
         return new ApplicationDbContext(options);
     }
+
+    private static IDistributedCache CreateCache()
+        => new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()), NullLoggerFactory.Instance);
+    
 
     [Fact]
 
@@ -39,7 +46,8 @@ public class ProductRepositoryTests
         );
 
         await context.SaveChangesAsync();
-        var repository = new ProductRepository(context);
+        IDistributedCache cache = new MemoryDistributedCache(new Microsoft.Extensions.Options.OptionsWrapper<Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions>(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions()));
+        var repository = new ProductRepository(context, cache);
         var results = await repository.GetAllAsync(new ProductQuerryParametars { PageNumber = 1, PageSize = 2 });
 
         results.Items.Should().HaveCount(2);
@@ -63,7 +71,7 @@ public class ProductRepositoryTests
         );
 
         await context.SaveChangesAsync();
-        var repository = new ProductRepository(context);
+        var repository = new ProductRepository(context, CreateCache());
         var results = await repository.GetAllAsync(new ProductQuerryParametars { MinPrice = 10, MaxPrice = 100 });
         results.Items.Should().ContainSingle(c => c.Name == "Mid");
         
@@ -84,7 +92,7 @@ public class ProductRepositoryTests
         );
         
         await context.SaveChangesAsync();
-        var repository = new ProductRepository(context);
+        var repository = new ProductRepository(context, CreateCache());
         var results = await repository.GetAllAsync(new ProductQuerryParametars { Search = "Laptop" });
         results.Items.Should().ContainSingle(c => c.Name == "Laptop");
     }

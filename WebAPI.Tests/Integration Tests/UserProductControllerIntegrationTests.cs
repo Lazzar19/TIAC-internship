@@ -92,25 +92,41 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         content.Should().Contain("\"quantity\"");
     }
 
-    [Fact(Skip = "Backend returning 500 for nonexistent product - should add validation")]
-    public async Task Assign_Product_To_User_With_Invalid_Product_Should_Still_Return_Ok()
+    [Fact]
+    public async Task Assigning_NonExistent_Product_Should_Return_NotFound()
     {
-        var userId = await CreateTestUser();
-
-        var assignDto = new AsigningUserToProductDTO
+        var userID = await CreateTestUser();
+        var assignDTO = new AsigningUserToProductDTO
         {
-            ProductID = 99999, // some random ID
+            ProductID = 9999,
             Quantity = 5
         };
 
         var response = await _client.PostAsync(
-            $"/api/users/{userId}/products",
-            ToJsonContent(assignDto)
-        );
+            $"/api/users/{userID}/products", ToJsonContent(assignDTO));
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
     }
 
+    [Fact]
+    public async Task Assigning_Product_With_Insufficient_Stock_Should_Return_BadRequest()
+    {
+        var userID = await CreateTestUser();
+        var productID =  await CreateTestProduct();
+
+        var assignDTO = new AsigningUserToProductDTO
+        {
+            ProductID = productID,
+            Quantity = 999
+        };
+        
+        var response = await _client.PostAsync(
+            $"/api/users/{userID}/products", ToJsonContent(assignDTO));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+    
     [Fact]
     public async Task Delete_Product_Assignment_Should_Return_NoContent()
     {

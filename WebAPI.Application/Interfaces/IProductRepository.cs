@@ -10,6 +10,8 @@ public interface IProductRepository
     Task AddAsync(Product prod); // post 
     Task UpdateAsync(Product prod); // put 
     Task DeleteAsync(int id); // delete 
-    
-    
+
+    Task InvalidateCacheAsync(int productID);
+
+
 }
