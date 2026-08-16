@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/Lazzar19/TIAC-internship/actions/workflows/ci.yml/badge.svg)
 
-A REST API service built during an internship program, implemented in **ASP.NET Core (.NET 10)** with a focus on clean layered architecture, secure authentication, and full containerization.
+A REST API service built during an internship program, implemented in **ASP.NET Core (.NET 10)** with a focus on clean layered architecture, secure authentication, environment-specific infrastructure, Redis caching, and full containerization.
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@ A REST API service built during an internship program, implemented in **ASP.NET 
 - [Getting Started](#getting-started)
     - [Running Locally (without Docker)](#running-locally-without-docker)
     - [Running with Docker](#running-with-docker)
+    - [Production Stack](#production-stack)
 - [API Documentation](#api-documentation)
 - [Authentication](#authentication)
 - [Testing](#testing)
@@ -22,7 +23,7 @@ A REST API service built during an internship program, implemented in **ASP.NET 
 
 ## Overview
 
-The API manages products (`Product`) and users (`User`), linked through a `UserProduct` join entity (tracking how many units of a given product a given user owns). It supports full CRUD operations, pagination and filtering, JWT authentication with role-based authorization, and input validation.
+The API manages products (`Product`) and users (`User`), linked through a `UserProduct` join entity that tracks how many units of a given product a given user owns, with stock validation and atomic inventory updates on every assignment. It supports full CRUD operations, pagination and filtering, JWT authentication with refresh token rotation and role-based authorization, rate limiting, and input validation.
 
 ## Architecture
 
@@ -37,24 +38,26 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 
 | Layer | Contains | Depends on |
 |---|---|---|
-| **Domain** | Entities (`Product`, `User`, `UserProduct`) — pure business model | Nothing (no references) |
+| **Domain** | Entities (`Product`, `User`, `UserProduct`, `RefreshToken`) — pure business model | Nothing (no references) |
 | **Application** | DTOs, interfaces (`IProductRepository`, etc.), FluentValidation validators, mappings | Domain |
-| **Infrastructure** | `ApplicationDbContext`, concrete repository implementations, `TokenService`, password hashing | Application + Domain |
-| **Api** | Controllers, `Program.cs`, middleware, Swagger/JWT configuration | Everything else |
+| **Infrastructure** | `ApplicationDbContext`, concrete repository implementations, `TokenService`, password hashing, Redis cache integration | Application + Domain |
+| **Api** | Controllers, `Program.cs`, middleware, Swagger/JWT configuration, health checks, rate limiting | Everything else |
 
 **Why this structure:** swapping the underlying technology (e.g. SQLite → PostgreSQL) only requires changes within the Infrastructure layer. Business logic is testable independently of the database, since controllers depend on interfaces (`IProductRepository`) rather than concrete implementations — this allows mocking in unit tests without a real database.
 
 ## Tech Stack
 
 - **ASP.NET Core 10** — Web API framework
-- **Entity Framework Core 10 + SQLite** — ORM and database
+- **Entity Framework Core 10 + SQLite / PostgreSQL** — ORM and databases (SQLite for development, PostgreSQL for production)
 - **FluentValidation** — declarative input validation
-- **JWT (JSON Web Tokens)** — authentication and authorization
+- **JWT (JSON Web Tokens)** — authentication with access + refresh token rotation
 - **PBKDF2 (Rfc2898DeriveBytes)** — salted password hashing
+- **Redis** — distributed caching for hot reads, with version-based invalidation
+- **Serilog** — structured logging with per-request logging
 - **Swashbuckle / Swagger** — OpenAPI documentation
-- **xUnit + Moq + FluentAssertions** — unit testing
-- **Docker + Docker Compose** — containerization
-- **GitHub Actions** — CI pipeline
+- **xUnit + Moq + FluentAssertions** — unit and integration testing
+- **Docker + Docker Compose** — containerization (separate dev and production stacks)
+- **GitHub Actions** — CI/CD pipeline with automated Docker image publishing
 
 ## Features
 
@@ -63,11 +66,18 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ DTOs separated by purpose (`Create`, `Update`, read-only `Dto`) — prevents leaking internal/sensitive fields (e.g. `PasswordHash`) and prevents clients from setting server-generated fields (`Id`, `CreatedAt`)
 - ✅ FluentValidation on all input models
 - ✅ JWT authentication (register/login) with hashed passwords (PBKDF2 + salt + `FixedTimeEquals` comparison resistant to timing attacks)
+- ✅ Refresh token rotation with revocation support (login, refresh, logout)
+- ✅ Rate limiting on authentication endpoints (5 requests/min per IP) to mitigate brute-force attacks
+- ✅ Stock validation and atomic inventory decrement on product assignment, with automatic stock restoration on unassignment
 - ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`)
+- ✅ Redis-backed caching for product reads with version-based cache invalidation on writes
+- ✅ Structured logging via Serilog (console sink, per-request request/response logging)
+- ✅ Health check endpoint (`/health`) for container orchestration and uptime monitoring
 - ✅ Swagger UI with JWT Bearer authorization support
-- ✅ Dockerized deployment with persistent data (named volume)
-- ✅ CI pipeline (build + test on every push)
-- ✅ 24+ unit tests (validators, hashing, repository logic)
+- ✅ Dockerized development stack with persistent SQLite data and Redis cache
+- ✅ Production Docker Compose stack with PostgreSQL + Redis, including container healthchecks
+- ✅ CI/CD pipeline (build + test on every push, Docker image publish to GHCR on `main`)
+- ✅ 70+ unit and integration tests (validators, hashing, repository logic, full HTTP request/response flows)
 
 ## Project Structure
 
@@ -76,15 +86,17 @@ WebAPI/
 ├── WebAPI.sln
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-compose.prod.yml
 ├── .dockerignore
 ├── .github/workflows/ci.yml
-├── WebAPI/                      # Api layer
+├── WebAPI/                        # Api layer
 │   ├── Controllers/
 │   ├── Middleware/
 │   ├── Program.cs
-│   └── appsettings.json
-├── WebAPI.Domain/                # Domain layer
-│   └── (Product, User, UserProduct)
+│   ├── appsettings.json
+│   └── appsettings.Production.json
+├── WebAPI.Domain/                 # Domain layer
+│   └── (Product, User, UserProduct, RefreshToken)
 ├── WebAPI.Application/            # Application layer
 │   ├── Dtos/
 │   ├── Interfaces/
@@ -93,8 +105,9 @@ WebAPI/
 ├── WebAPI.Infrastructure/         # Infrastructure layer
 │   ├── Migrations/
 │   ├── ApplicationDbContext.cs
+│   ├── DatabaseExtensions.cs      # provider + cache DI registration
 │   └── (Repository implementations, TokenService, PasswordHasher)
-└── WebAPI.Tests/                  # Unit tests
+└── WebAPI.Tests/                  # Unit + integration tests
 ```
 
 ## Getting Started
@@ -108,14 +121,13 @@ git clone https://github.com/Lazzar19/TIAC-internship.git
 cd TIAC-internship
 
 dotnet restore
-dotnet ef database update --project WebAPI.Infrastructure --startup-project WebAPI
 
 dotnet user-secrets set "Jwt:Key" "<random-string-at-least-32-characters>" --project WebAPI
 
 dotnet run --project WebAPI
 ```
 
-The API is available at `http://localhost:5080/swagger` (the port may vary — check the console output).
+The API is available at `http://localhost:5080/swagger` (the port may vary — check the console output). In `Development`, the app syncs the SQLite schema automatically on startup.
 
 ### Running with Docker
 
@@ -138,16 +150,35 @@ docker compose up --build -d
 docker compose down
 ```
 
-The database is stored in a Docker named volume (`webapi-data`), mounted at `/app/data` inside the container — data survives container restarts and removal. Migrations are applied automatically on every application startup.
+The development stack uses SQLite (`webapi-data` volume mounted at `/app/data`) and Redis for caching.
+
+### Production Stack
+
+For a production-like local deployment, use the PostgreSQL + Redis compose file:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Required environment variables:
+
+```bash
+POSTGRES_PASSWORD=<strong-postgres-password>
+JWT_KEY=<random-string-at-least-32-characters>
+```
+
+The production stack applies EF Core migrations automatically on startup and uses container healthchecks to ensure the API only starts once PostgreSQL and Redis are ready.
 
 ## API Documentation
 
-Full interactive documentation is available via Swagger UI (`/swagger`) once the app is running. Key endpoints:
+Full interactive documentation is available via Swagger UI (`/swagger`) once the app is running (Development only). Key endpoints:
 
 | Method | Route | Description | Auth Required |
 |---|---|---|---|
 | `POST` | `/api/auth/register` | Register a new user | No |
-| `POST` | `/api/auth/login` | Log in, returns a JWT token | No |
+| `POST` | `/api/auth/login` | Log in, returns access + refresh tokens | No |
+| `POST` | `/api/auth/refresh` | Exchange a valid refresh token for a new token pair | No |
+| `POST` | `/api/auth/logout` | Revoke all refresh tokens for the current user | Yes |
 | `GET` | `/api/product` | List products (pagination + filtering) | Yes |
 | `GET` | `/api/product/{id}` | Get product details | Yes |
 | `POST` | `/api/product` | Create a product | Yes |
@@ -156,17 +187,20 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `GET` | `/api/user` | List users | Yes |
 | `PUT` | `/api/user/{id}/password` | Change password | Yes |
 | `GET` | `/api/users/{userId}/products` | Products assigned to a user | Yes |
-| `POST` | `/api/users/{userId}/products` | Assign a product to a user | Yes |
+| `POST` | `/api/users/{userId}/products` | Assign a product to a user (validates stock) | Yes |
+| `DELETE` | `/api/users/{userId}/products/{productId}` | Unassign a product, restoring stock | Yes |
+| `GET` | `/health` | Health check for container orchestration | No |
 
 ## Authentication
 
-The API uses **JWT Bearer** authentication. After a successful login:
+The API uses **JWT Bearer** authentication with refresh token rotation. After a successful login:
 
 1. Copy the returned `token`.
 2. In Swagger UI, click **Authorize** and enter `Bearer <token>`.
 3. All protected endpoints (`[Authorize]`) are now accessible for the duration of the token.
+4. When the access token expires, exchange the `refreshToken` via `/api/auth/refresh` for a new pair — the old refresh token is revoked on use.
 
-Passwords are stored exclusively as **PBKDF2 hashes** (100,000 iterations, HMAC-SHA256, 128-bit random salt per user) — never as plain text.
+Passwords are stored exclusively as **PBKDF2 hashes** (100,000 iterations, HMAC-SHA256, 128-bit random salt per user) — never as plain text. Login and refresh endpoints are rate-limited to mitigate brute-force attacks.
 
 ## Testing
 
@@ -177,21 +211,22 @@ dotnet test
 The test project (`WebAPI.Tests`) covers:
 - FluentValidation rules, including boundary cases (e.g. exactly at `MaximumLength`, `GreaterThan(0)` limits)
 - Password hashing and verification
-- Repository logic (pagination, filtering, `AddOrUpdate` behavior) using an EF Core in-memory database
+- Repository logic (pagination, filtering, stock validation) using an EF Core in-memory database
 - JWT token generation and claim content
+- Full HTTP integration tests via `WebApplicationFactory` — auth flows, admin-only authorization, product/user CRUD, rate limiting behavior
 
 ## CI/CD
 
 A GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on every push and pull request to `main`:
 1. Restores dependencies
-2. Builds the project (Release configuration)
-3. Runs all unit tests
+2. Builds the solution (Release configuration)
+3. Runs all unit and integration tests
+4. On pushes to `main`, builds and publishes a Docker image to GitHub Container Registry (GHCR)
 
 ## Future Improvements
 
-- Refresh token mechanism (long-lived token to renew the access token without re-authenticating)
-- Integration tests using `WebApplicationFactory`
-- Health check endpoint (`/health`)
-- Structured logging (Serilog)
-- Rate limiting
-- Replacing SQLite with PostgreSQL in the production Docker Compose setup
+- Optimistic concurrency (e.g. a `RowVersion` column) to fully eliminate stock race conditions under high concurrent load
+- CORS policy configuration for browser-based clients
+- API versioning (`/api/v1/...`)
+- Soft delete for products and users, with audit history
+- Integration test coverage for the PostgreSQL and Redis production paths (currently exercised manually)
