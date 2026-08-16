@@ -1,10 +1,15 @@
-﻿name: CI
+﻿name: CI/CD
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-test:
@@ -20,22 +25,40 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore WebAPI.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build WebAPI.sln --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
-        
-  docker-build:
-      runs-on: ubuntu-latest
-      needs: build-and-test
-        
-      steps:
-        - name: Checkout code 
-          uses: actions/checkout@v4 
-          
-        - name: Build Docker image
-          run: docker build -t webapi:ci .
+        run: dotnet test WebAPI.sln --no-build --configuration Release --verbosity normal
+
+  publish-docker-image:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/tiac-webapi
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
         
