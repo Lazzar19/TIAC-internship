@@ -251,4 +251,20 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         var response = await _client.DeleteAsync("/api/User/99999");
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task Delete_Existing_User_Should_Return_Forbidden_Without_Admin_Role()
+    {
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(new CreateUserDTO
+        {
+            Username = UniqueUsername(),
+            Password = "testpassword123!",
+            Email = UniqueEmail()
+        }));
+        var json = System.Text.Json.JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+        var userId = json.RootElement.GetProperty("id").GetInt32();
+
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Delete, $"/api/User/{userId}");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

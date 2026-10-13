@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using WebAPI.Application;
 using WebAPI.Application.Interfaces;
+using WebAPI.Authorization;
 using WebAPI.Application.Validators;
 using WebAPI.Infrastructure;
 using WebAPI.Middleware;
@@ -141,6 +142,12 @@ using Serilog;
         {
             dbContext.Database.Migrate(); // postgres production
         }
+
+        await AdminUserSeeder.SeedAsync(
+            scope.ServiceProvider,
+            app.Environment,
+            app.Configuration,
+            app.Logger);
     }
 
     // Configure the HTTP request pipeline.

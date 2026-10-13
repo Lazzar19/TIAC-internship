@@ -123,9 +123,13 @@ cd TIAC-internship
 dotnet restore
 
 dotnet user-secrets set "Jwt:Key" "<random-string-at-least-32-characters>" --project WebAPI
+dotnet user-secrets set "Admin:Email" "admin@example.com" --project WebAPI
+dotnet user-secrets set "Admin:Password" "<password>" --project WebAPI
 
 dotnet run --project WebAPI
 ```
+
+`Admin:Password` is read from user-secrets or environment variables. A value placed in `appsettings.json` is ignored. In Production the password is read only from the `Admin__Password` environment variable. If either value is missing, startup skips the admin account and writes a warning. Registration cannot set `Role`; the seeded account is the admin.
 
 The API is available at `http://localhost:5080/swagger` (the port may vary — check the console output). In `Development`, the app syncs the SQLite schema automatically on startup.
 
@@ -136,7 +140,11 @@ The API is available at `http://localhost:5080/swagger` (the port may vary — c
 1. Create a `.env` file in the root folder:
 ```
 JWT_KEY=<random-string-at-least-32-characters>
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=<password>
 ```
+
+`ADMIN_EMAIL` and `ADMIN_PASSWORD` are optional. Without them the API starts and does not create an admin account.
 
 2. Run:
 ```bash
@@ -165,7 +173,11 @@ Required environment variables:
 ```bash
 POSTGRES_PASSWORD=<strong-postgres-password>
 JWT_KEY=<random-string-at-least-32-characters>
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=<password>
 ```
+
+`ADMIN_PASSWORD` is required only when the production stack should seed an admin account. The API does not read that password from `appsettings`.
 
 The production stack applies EF Core migrations automatically on startup and uses container healthchecks to ensure the API only starts once PostgreSQL and Redis are ready.
 

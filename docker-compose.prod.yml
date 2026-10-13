@@ -18,6 +18,8 @@ services:
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=WebAPI
       - Jwt__Audience=WebAPIUsers
+      - Admin__Email=${ADMIN_EMAIL:-}
+      - Admin__Password=${ADMIN_PASSWORD:-}
 
   postgres:
     image: postgres:16-alpine

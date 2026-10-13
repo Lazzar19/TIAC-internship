@@ -72,5 +72,67 @@ public class UserControllerAdminIntegrationTests : IClassFixture<AdminTestWebApp
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Delete_User_Restores_Assigned_Stock()
+    {
+        var userId = await CreateUser();
+        var productId = await CreateProduct(stock: 50);
+
+        var assign = await _client.PostAsync($"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        {
+            ProductID = productId,
+            Quantity = 5
+        }));
+        assign.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var beforeDelete = await ReadStock(productId);
+        beforeDelete.Should().Be(45);
+
+        var delete = await _client.DeleteAsync($"/api/User/{userId}");
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var afterDelete = await ReadStock(productId);
+        afterDelete.Should().Be(50);
+
+        var assignments = await _client.GetAsync($"/api/users/{userId}/products");
+        assignments.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await assignments.Content.ReadAsStringAsync()).Should().Be("[]");
+    }
+
+    private async Task<int> CreateUser()
+    {
+        var response = await _client.PostAsync("/api/User", ToJsonContent(new CreateUserDTO
+        {
+            Username = UniqueUsername(),
+            Password = "testpassword123!",
+            Email = UniqueEmail()
+        }));
+        response.EnsureSuccessStatusCode();
+        var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return json.RootElement.GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateProduct(int stock)
+    {
+        var response = await _client.PostAsync("/api/Product", ToJsonContent(new CreatedProductDTO
+        {
+            Name = $"stock_{Guid.NewGuid().ToString()[..8]}",
+            Description = "stock restore",
+            Price = 15m,
+            Stock = stock
+        }));
+        response.EnsureSuccessStatusCode();
+        var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return json.RootElement.GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> ReadStock(int productId)
+    {
+        var response = await _client.GetAsync($"/api/Product/{productId}");
+        response.EnsureSuccessStatusCode();
+        var json = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return json.RootElement.GetProperty("stock").GetInt32();
+    }
 }
 
