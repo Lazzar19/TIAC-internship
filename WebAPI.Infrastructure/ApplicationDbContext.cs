@@ -20,6 +20,10 @@ public class ApplicationDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
 
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(token => token.Token)
+            .IsUnique();
+
         modelBuilder.Entity<Product>()
             .Property(product => product.RowVersion)
             .IsConcurrencyToken();

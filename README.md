@@ -66,11 +66,11 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ DTOs separated by purpose (`Create`, `Update`, read-only `Dto`) — prevents leaking internal/sensitive fields (e.g. `PasswordHash`) and prevents clients from setting server-generated fields (`Id`, `CreatedAt`)
 - ✅ FluentValidation on all input models
 - ✅ JWT authentication (register/login) with hashed passwords (PBKDF2 + salt + `FixedTimeEquals` comparison resistant to timing attacks)
-- ✅ Refresh token rotation with revocation support (login, refresh, logout)
+- ✅ Refresh token rotation: the database stores a SHA-256 hash, reuse of a revoked token ends that user's sessions, and a session cannot be refreshed after 7 days
 - ✅ Rate limiting on authentication endpoints (5 requests/min per IP) to mitigate brute-force attacks
 - ✅ Stock changes only through assignment and unassignment. A conditional database update rejects a sale when stock is no longer available, and `RowVersion` rejects a conflicting product edit with HTTP 409
 - ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`)
-- ✅ Redis-backed caching for product reads with version-based cache invalidation on writes
+- ✅ Redis-backed caching for product reads. The list key includes a version, so a write is visible on the next read, and a cache failure falls back to the database
 - ✅ Structured logging via Serilog (console sink, per-request request/response logging)
 - ✅ Health check endpoint (`/health`) for container orchestration and uptime monitoring
 - ✅ Swagger UI with JWT Bearer authorization support
@@ -206,7 +206,7 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `GET` | `/api/users/{userId}/products` | Products assigned to a user | Yes (self or Admin) |
 | `POST` | `/api/users/{userId}/products` | Set the total quantity a user owns. Replaces the previous quantity and adjusts stock by the difference | Yes (self or Admin) |
 | `DELETE` | `/api/users/{userId}/products/{productId}` | Unassign a product, restoring stock | Yes (self or Admin) |
-| `GET` | `/health` | Health check for container orchestration | No |
+| `GET` | `/health` | Health check for the database, and Redis when it is configured | No |
 
 ## Authentication
 
@@ -216,6 +216,8 @@ The API uses **JWT Bearer** authentication with refresh token rotation. After a 
 2. In Swagger UI, click **Authorize** and enter `Bearer <token>`.
 3. All protected endpoints (`[Authorize]`) are now accessible for the duration of the token.
 4. When the access token expires, exchange the `refreshToken` via `/api/auth/refresh` for a new pair — the old refresh token is revoked on use.
+
+After logout the access token stays valid until it expires (30 minutes). Logout revokes refresh tokens, so they can no longer extend the session.
 
 Passwords are stored exclusively as **PBKDF2 hashes** (100,000 iterations, HMAC-SHA256, 128-bit random salt per user) — never as plain text. Login and refresh endpoints are rate-limited to mitigate brute-force attacks.
 

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using FluentValidation;
+using HealthChecks.Redis;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -57,8 +58,13 @@ using Serilog;
     builder.Services.AddDatabase(builder.Configuration);
     builder.Services.AddApplicationCache(builder.Configuration);
 
-    builder.Services.AddHealthChecks()
+    var healthChecks = builder.Services.AddHealthChecks()
         .AddDbContextCheck<ApplicationDbContext>(name: "database");
+
+    var redisConfiguration = builder.Configuration["Redis:Configuration"]
+        ?? builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrWhiteSpace(redisConfiguration))
+        healthChecks.AddRedis(redisConfiguration, name: "redis");
 
 
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -68,6 +74,7 @@ using Serilog;
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
     builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+    builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 
 

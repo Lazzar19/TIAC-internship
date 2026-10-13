@@ -19,11 +19,13 @@ public class UserController : ControllerBase
 
     private readonly IUserRepository userRepository_;
     private readonly IPasswordHasher passwordHasher_;
+    private readonly IRefreshTokenRepository refreshTokenRepository_;
     
-    public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher)
+    public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, IRefreshTokenRepository refreshTokenRepository)
     {
         userRepository_ = userRepository;
         passwordHasher_ = passwordHasher;
+        refreshTokenRepository_ = refreshTokenRepository;
     }
 
 
@@ -121,6 +123,7 @@ public class UserController : ControllerBase
         user.PasswordHash = passwordHasher_.Hash(dto.NewPassword);
         
         await  userRepository_.UpdateAsync(user);
+        await refreshTokenRepository_.RevokeAllByUserIdAsync(id);
         return NoContent();
     }
     

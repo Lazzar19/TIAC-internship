@@ -2,10 +2,9 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using WebAPI.Application;
 using WebAPI.Domain;
 
@@ -33,27 +32,48 @@ public class ProductRepository : IProductRepository
 
     private readonly ApplicationDbContext _dbContext;
     private readonly IDistributedCache _cache;
+    private readonly ILogger<ProductRepository> _logger;
 
-    public ProductRepository(ApplicationDbContext dbContext, IDistributedCache cache)
+    public ProductRepository(ApplicationDbContext dbContext, IDistributedCache cache, ILogger<ProductRepository>? logger = null)
     {
         _dbContext = dbContext;
         _cache = cache;
+        _logger = logger ?? NullLogger<ProductRepository>.Instance;
     }
 
     public async Task<PageResult<Product>> GetAllAsync(ProductQuerryParametars queryParametars)
     {
-        var version = await GetListVersionAsync();
-        var cacheKey = BuildListCacheKey(queryParametars);
-        var cachedResult = await _cache.GetStringAsync(cacheKey);
-
-        if (!string.IsNullOrWhiteSpace(cachedResult))
+        var versionRead = await TryGetStringAsync(ListVersionKey);
+        if (versionRead.Ok)
         {
-            var cachedPage = JsonSerializer.Deserialize<PageResult<Product>>(cachedResult, CacheJsonOptions);
-            if (cachedPage is not null)
+            var version = string.IsNullOrEmpty(versionRead.Value) ? "1" : versionRead.Value;
+            var cacheKey = BuildListCacheKey(version, queryParametars);
+            var cachedResult = await TryGetStringAsync(cacheKey);
+
+            if (cachedResult.Ok && !string.IsNullOrWhiteSpace(cachedResult.Value))
             {
-                return cachedPage;
+                var cachedPage = JsonSerializer.Deserialize<PageResult<Product>>(cachedResult.Value, CacheJsonOptions);
+                if (cachedPage is not null)
+                    return cachedPage;
             }
+
+            var result = await QueryPageAsync(queryParametars);
+            if (cachedResult.Ok)
+            {
+                await TrySetStringAsync(
+                    cacheKey,
+                    JsonSerializer.Serialize(result, CacheJsonOptions),
+                    ListCacheOptions);
+            }
+
+            return result;
         }
+
+        return await QueryPageAsync(queryParametars);
+    }
+
+    private async Task<PageResult<Product>> QueryPageAsync(ProductQuerryParametars queryParametars)
+    {
 
         var query = _dbContext.Products.AsQueryable();
 
@@ -72,34 +92,31 @@ public class ProductRepository : IProductRepository
             .Take(queryParametars.PageSize)
             .ToListAsync();
 
-        var result = new PageResult<Product>
+        return new PageResult<Product>
         {
             Items = items,
             PageNumber = queryParametars.PageNumber,
             PageSize = queryParametars.PageSize,
             TotalCount = count
         };
-
-        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(result, CacheJsonOptions), ListCacheOptions);
-
-        return result;
     }
 
     public async Task<Product?> GetByIDAsync(int id)
     {
         var cacheKey = BuildItemCacheKey(id);
-        var cachedProduct = await _cache.GetStringAsync(cacheKey);
+        var cachedProduct = await TryGetStringAsync(cacheKey);
 
-        if (!string.IsNullOrWhiteSpace(cachedProduct))
-        {
-            return JsonSerializer.Deserialize<Product>(cachedProduct, CacheJsonOptions);
-        }
+        if (cachedProduct.Ok && !string.IsNullOrWhiteSpace(cachedProduct.Value))
+            return JsonSerializer.Deserialize<Product>(cachedProduct.Value, CacheJsonOptions);
 
         var product = await _dbContext.Products.FindAsync(id);
 
-        if (product is not null)
+        if (product is not null && cachedProduct.Ok)
         {
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(product, CacheJsonOptions), ItemCacheOptions);
+            await TrySetStringAsync(
+                cacheKey,
+                JsonSerializer.Serialize(product, CacheJsonOptions),
+                ItemCacheOptions);
         }
 
         return product;
@@ -110,7 +127,10 @@ public class ProductRepository : IProductRepository
         await _dbContext.Products.AddAsync(product);
         await _dbContext.SaveChangesAsync();
 
-        await _cache.SetStringAsync(BuildItemCacheKey(product.ID), JsonSerializer.Serialize(product, CacheJsonOptions), ItemCacheOptions);
+        await TrySetStringAsync(
+            BuildItemCacheKey(product.ID),
+            JsonSerializer.Serialize(product, CacheJsonOptions),
+            ItemCacheOptions);
         await BumpListVersionAsync();
     }
 
@@ -134,7 +154,10 @@ public class ProductRepository : IProductRepository
             return false;
         }
 
-        await _cache.SetStringAsync(BuildItemCacheKey(stored.ID), JsonSerializer.Serialize(stored, CacheJsonOptions), ItemCacheOptions);
+        await TrySetStringAsync(
+            BuildItemCacheKey(stored.ID),
+            JsonSerializer.Serialize(stored, CacheJsonOptions),
+            ItemCacheOptions);
         await BumpListVersionAsync();
         return true;
     }
@@ -158,28 +181,66 @@ public class ProductRepository : IProductRepository
             return DeleteProductResult.Assigned;
         }
 
-        await _cache.RemoveAsync(BuildItemCacheKey(id));
+        await TryRemoveAsync(BuildItemCacheKey(id));
         await BumpListVersionAsync();
         return DeleteProductResult.Deleted;
     }
 
     public async Task InvalidateCacheAsync(int productID)
     {
-        await _cache.RemoveAsync(BuildItemCacheKey(productID));
+        await TryRemoveAsync(BuildItemCacheKey(productID));
         await BumpListVersionAsync();
-    }
-    
-    private async Task<string> GetListVersionAsync()
-    {
-        var version = await _cache.GetStringAsync(ListVersionKey);
-        return string.IsNullOrEmpty(version) ? "1" : version;
     }
 
     private async Task BumpListVersionAsync()
     {
-        var current = await GetListVersionAsync();
-        var next = (int.TryParse(current, out var v) ? v : 1) + 1;
-        await _cache.SetStringAsync(ListVersionKey, next.ToString(CultureInfo.InvariantCulture));
+        var current = await TryGetStringAsync(ListVersionKey);
+        if (!current.Ok)
+            return;
+
+        var version = string.IsNullOrEmpty(current.Value) ? "1" : current.Value;
+        var next = (int.TryParse(version, out var parsed) ? parsed : 1) + 1;
+        await TrySetStringAsync(ListVersionKey, next.ToString(CultureInfo.InvariantCulture), options: null);
+    }
+
+    private async Task<(bool Ok, string? Value)> TryGetStringAsync(string cacheKey)
+    {
+        try
+        {
+            return (true, await _cache.GetStringAsync(cacheKey));
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Product cache read failed for {CacheKey}. The request continues from the database.", cacheKey);
+            return (false, null);
+        }
+    }
+
+    private async Task TrySetStringAsync(string cacheKey, string value, DistributedCacheEntryOptions? options)
+    {
+        try
+        {
+            if (options is null)
+                await _cache.SetStringAsync(cacheKey, value);
+            else
+                await _cache.SetStringAsync(cacheKey, value, options);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Product cache write failed for {CacheKey}.", cacheKey);
+        }
+    }
+
+    private async Task TryRemoveAsync(string cacheKey)
+    {
+        try
+        {
+            await _cache.RemoveAsync(cacheKey);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Product cache removal failed for {CacheKey}.", cacheKey);
+        }
     }
     
     
@@ -187,9 +248,9 @@ public class ProductRepository : IProductRepository
 
     private static string BuildItemCacheKey(int id) => $"products:item:{id}";
 
-    private static string BuildListCacheKey(ProductQuerryParametars queryParametars)
+    private static string BuildListCacheKey(string version, ProductQuerryParametars queryParametars)
     {
-        return $"products:list:{queryParametars.PageNumber}:{queryParametars.PageSize}:{Normalize(queryParametars.Search)}:{Normalize(queryParametars.MinPrice)}:{Normalize(queryParametars.MaxPrice)}";
+        return $"products:list:{version}:{queryParametars.PageNumber}:{queryParametars.PageSize}:{Normalize(queryParametars.Search)}:{Normalize(queryParametars.MinPrice)}:{Normalize(queryParametars.MaxPrice)}";
     }
     
     private static string Normalize(string? value)

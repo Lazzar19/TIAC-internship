@@ -90,32 +90,17 @@ public class AuthController : ControllerBase
 
     public async Task<ActionResult<AuthResponseDTO>> Refresh(RefreshRequestDTO dto)
     {
-        var storedToken = await refreshTokenRepository_.GetByTokenAsync(dto.RefreshToken);
-
-        if (storedToken is null || storedToken.IsRevoked || storedToken.IsExpired)
-            return Unauthorized("Invalid or expired refresh token");
-
-        // Token rotation: revoke old token
-        await refreshTokenRepository_.RevokeAsync(storedToken);
-
-        // Generate new token pair
-        var newToken = tokenService_.GenerateToken(storedToken.User);
         var newRefreshTokenValue = tokenService_.GenerateRefreshToken();
+        var rotation = await refreshTokenRepository_.RotateAsync(dto.RefreshToken, newRefreshTokenValue, DateTime.UtcNow);
 
-        var newRefreshToken = new RefreshToken
-        {
-            Token = newRefreshTokenValue,
-            UserId = storedToken.UserId,
-            ExpiresAt = DateTime.UtcNow.AddDays(1)
-        };
-
-        await refreshTokenRepository_.AddAsync(newRefreshToken);
+        if (!rotation.Succeeded || rotation.User is null)
+            return Unauthorized("Invalid or expired refresh token");
 
         return Ok(new AuthResponseDTO
         {
-            Token = newToken,
+            Token = tokenService_.GenerateToken(rotation.User),
             RefreshToken = newRefreshTokenValue,
-            Username = storedToken.User.Username
+            Username = rotation.User.Username
         });
     }
 
