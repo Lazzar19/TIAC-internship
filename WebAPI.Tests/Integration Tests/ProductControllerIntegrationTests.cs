@@ -49,7 +49,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = 10
         };
 
-        var createResponse = await _client.PostAsync("/api/Product", ToJsonContent(createProductDTO));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(createProductDTO));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var productId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -74,7 +74,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
 
         var content = ToJsonContent(createProductDTO);
         
-        var response = await _client.PostAsync("/api/Product", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", content);
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var responseContent = await response.Content.ReadAsStringAsync();
@@ -94,7 +94,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
         
         var content = ToJsonContent(createProductDTO);
 
-        var response = await _client.PostAsync("/api/Product", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", content);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -110,7 +110,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
         };
 
         var content = ToJsonContent(createProductDTO);
-        var response = await _client.PostAsync("/api/Product", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", content);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -127,7 +127,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
         };
 
         var content = ToJsonContent(createProductDTO);
-        var response = await _client.PostAsync("/api/Product", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", content);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -143,7 +143,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = 5
         };
 
-        var createResponse = await _client.PostAsync("/api/Product", ToJsonContent(createProductDTO));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(createProductDTO));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var productId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -156,7 +156,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = 15
         };
 
-        var response = await _client.PutAsync($"/api/Product/{productId}", ToJsonContent(updateDto));
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Put, $"/api/Product/{productId}", ToJsonContent(updateDto));
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -172,7 +172,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = 15
         };
 
-        var response = await _client.PutAsync("/api/Product/99999", ToJsonContent(updateDto));
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Put, "/api/Product/99999", ToJsonContent(updateDto));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -188,7 +188,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = 5
         };
 
-        var createResponse = await _client.PostAsync("/api/Product", ToJsonContent(createProductDTO));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(createProductDTO));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var productId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -201,7 +201,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
             Stock = -5 // invalid - negative
         };
 
-        var response = await _client.PutAsync($"/api/Product/{productId}", ToJsonContent(updateDto));
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Put, $"/api/Product/{productId}", ToJsonContent(updateDto));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }

@@ -1,14 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using WebAPI.Application;
-using WebAPI.Application.Validators;
 using WebAPI.Application.Interfaces;
+using WebAPI.Application.Validators;
+using WebAPI.Authorization;
 
 namespace WebAPI.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Domain;
-using WebAPI.Infrastructure;
 
 
 [ApiController]
@@ -29,22 +28,36 @@ public class UserController : ControllerBase
 
 
     [HttpGet]
-
+    [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<ActionResult<IEnumerable<UserDTO>>> GetAll()
     {
         var users = await userRepository_.GetAllAsync();
         return Ok(users.Select(u => u.ToDTO()));
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("me")]
+    public async Task<ActionResult<UserDTO>> Me()
+    {
+        if (!CurrentUser.TryGetId(User, out var userId))
+            return Unauthorized();
 
+        var user = await userRepository_.GetByIDAsync(userId);
+        return user is null ? NotFound() : Ok(user.ToDTO());
+    }
+
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<UserDTO>> GetById(int id)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(id);
+        if (denied is not null)
+            return denied;
+
         var user = await userRepository_.GetByIDAsync(id);
         return user is null ? NotFound() : Ok(user.ToDTO());
     }
 
     [HttpPost]
+    [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<ActionResult<UserDTO>> Post(CreateUserDTO dto)
     {
         if (await userRepository_.EmailExistsAsync(dto.Email))
@@ -68,6 +81,10 @@ public class UserController : ControllerBase
 
     public async Task<IActionResult> Put(int id, UpdateUserDTO dto)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(id);
+        if (denied is not null)
+            return denied;
+
         var alreadyExisting = await userRepository_.GetByIDAsync(id);
         if (alreadyExisting is null) return NotFound();
 
@@ -89,6 +106,10 @@ public class UserController : ControllerBase
 
     public async Task<IActionResult> ChangePasswordAsync(int id, ChangePasswordDTO dto)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(id);
+        if (denied is not null)
+            return denied;
+
         var user = await userRepository_.GetByIDAsync(id);
         if (user is null) return NotFound();
 
@@ -105,7 +126,7 @@ public class UserController : ControllerBase
     
     
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")] // so that only admin can delete users 
+    [Authorize(Roles = CurrentUser.AdminRole)] 
 
     public async Task<IActionResult> DeleteAsync(int id)
     {

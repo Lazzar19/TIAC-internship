@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
+using WebAPI.Authorization;
 
 
 namespace WebAPI.Controllers;
@@ -118,15 +120,12 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("logout")]
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [Authorize]
     public async Task<IActionResult> Logout()
     {
-        var userId = int.Parse(User.FindFirst("sub")?.Value ?? "0");
-        
-        if (userId == 0)
-            return BadRequest("Invalid user token");
+        if (!CurrentUser.TryGetId(User, out var userId))
+            return Unauthorized();
 
-        // Revoke all refresh tokens for this user
         await refreshTokenRepository_.RevokeAllByUserIdAsync(userId);
 
         return NoContent();

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using WebAPI.Authorization;
 
 namespace WebAPI.Controllers;
 
@@ -43,6 +44,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<ActionResult<ProductDTO>> Post(CreatedProductDTO prodDTO)
     {
        var product = prodDTO.ToEntity();
@@ -53,6 +55,7 @@ public class ProductController : ControllerBase
     }
     
     [HttpPut("{id}")]
+    [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<IActionResult> Put(int id, UpdateProductDTO prod)
     {
         var already_existing = await productRepository_.GetByIDAsync(id);

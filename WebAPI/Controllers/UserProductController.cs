@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using WebAPI.Application;
+using WebAPI.Authorization;
 
 namespace WebAPI.Controllers;
 
-using WebAPI.Infrastructure;
 using WebAPI.Domain;
 
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +26,10 @@ public class UserProductController : ControllerBase
 
     public async Task<ActionResult<IEnumerable<UserProductDTO>>> GetByUserIDAsync(int userId)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(userId);
+        if (denied is not null)
+            return denied;
+
         var items = await userProductRepository_.GetByUserIDAsync(userId);
         return Ok(items.Select(up => up.ToDTO()));
     }
@@ -34,6 +38,10 @@ public class UserProductController : ControllerBase
 
     public async Task<ActionResult<UserProductDTO>> Assign(int userId, AsigningUserToProductDTO dto)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(userId);
+        if (denied is not null)
+            return denied;
+
         var result = await userProductRepository_.AssignAsync(userId, dto.ProductID, dto.Quantity);
 
         switch (result)
@@ -53,6 +61,10 @@ public class UserProductController : ControllerBase
 
     public async Task<IActionResult> DeleteAsync(int userId, int productID)
     {
+        var denied = this.DenyUnlessOwnerOrAdmin(userId);
+        if (denied is not null)
+            return denied;
+
         var existing = await userProductRepository_.GetAsync(userId, productID);
         if (existing is null) return NotFound();
 

@@ -178,17 +178,22 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `POST` | `/api/auth/register` | Register a new user | No |
 | `POST` | `/api/auth/login` | Log in, returns access + refresh tokens | No |
 | `POST` | `/api/auth/refresh` | Exchange a valid refresh token for a new token pair | No |
-| `POST` | `/api/auth/logout` | Revoke all refresh tokens for the current user | Yes |
+| `POST` | `/api/auth/logout` | Revoke all refresh tokens for the user in the access token | Yes |
 | `GET` | `/api/product` | List products (pagination + filtering) | Yes |
 | `GET` | `/api/product/{id}` | Get product details | Yes |
-| `POST` | `/api/product` | Create a product | Yes |
-| `PUT` | `/api/product/{id}` | Update a product | Yes |
+| `POST` | `/api/product` | Create a product | Yes (Admin) |
+| `PUT` | `/api/product/{id}` | Update a product | Yes (Admin) |
 | `DELETE` | `/api/product/{id}` | Delete a product | Yes (Admin) |
-| `GET` | `/api/user` | List users | Yes |
-| `PUT` | `/api/user/{id}/password` | Change password | Yes |
-| `GET` | `/api/users/{userId}/products` | Products assigned to a user | Yes |
-| `POST` | `/api/users/{userId}/products` | Assign a product to a user (validates stock) | Yes |
-| `DELETE` | `/api/users/{userId}/products/{productId}` | Unassign a product, restoring stock | Yes |
+| `GET` | `/api/user` | List users | Yes (Admin) |
+| `GET` | `/api/user/me` | Current user from the access token | Yes |
+| `GET` | `/api/user/{id}` | User details | Yes (self or Admin) |
+| `POST` | `/api/user` | Create a user | Yes (Admin) |
+| `PUT` | `/api/user/{id}` | Update a user | Yes (self or Admin) |
+| `PUT` | `/api/user/{id}/password` | Change password | Yes (self or Admin) |
+| `DELETE` | `/api/user/{id}` | Delete a user | Yes (Admin) |
+| `GET` | `/api/users/{userId}/products` | Products assigned to a user | Yes (self or Admin) |
+| `POST` | `/api/users/{userId}/products` | Assign a product to a user (validates stock) | Yes (self or Admin) |
+| `DELETE` | `/api/users/{userId}/products/{productId}` | Unassign a product, restoring stock | Yes (self or Admin) |
 | `GET` | `/health` | Health check for container orchestration | No |
 
 ## Authentication

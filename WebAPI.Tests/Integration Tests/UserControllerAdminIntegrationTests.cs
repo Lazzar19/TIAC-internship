@@ -53,5 +53,24 @@ public class UserControllerAdminIntegrationTests : IClassFixture<AdminTestWebApp
         var response = await _client.DeleteAsync("/api/User/99999");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Get_All_Users_With_Admin_Role_Should_Return_Ok()
+    {
+        var response = await _client.GetAsync("/api/User");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Update_Missing_User_With_Admin_Role_Should_Return_NotFound()
+    {
+        var response = await _client.PutAsync("/api/User/99999", ToJsonContent(new UpdateUserDTO
+        {
+            UserName = "missing",
+            Email = UniqueEmail()
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 }
 

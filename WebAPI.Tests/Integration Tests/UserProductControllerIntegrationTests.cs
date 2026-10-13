@@ -36,7 +36,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
             Email = UniqueEmail()
         };
 
-        var response = await _client.PostAsync("/api/User", ToJsonContent(userDto));
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(userDto));
         var content = await response.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(content);
         return jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -52,7 +52,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
             Stock = 50
         };
 
-        var response = await _client.PostAsync("/api/Product", ToJsonContent(productDto));
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(productDto));
         var content = await response.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(content);
         return jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -63,7 +63,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
     {
 
         var userId = await CreateTestUser();
-        var response = await _client.GetAsync($"/api/users/{userId}/products");
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Get, $"/api/users/{userId}/products");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -81,7 +81,10 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         };
 
 
-        var response = await _client.PostAsync(
+        var response = await TestClients.AsUserAsync(
+            _client,
+            userId,
+            HttpMethod.Post,
             $"/api/users/{userId}/products",
             ToJsonContent(assignDto)
         );
@@ -102,7 +105,10 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
             Quantity = 5
         };
 
-        var response = await _client.PostAsync(
+        var response = await TestClients.AsUserAsync(
+            _client,
+            userID,
+            HttpMethod.Post,
             $"/api/users/{userID}/products", ToJsonContent(assignDTO));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -121,7 +127,10 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
             Quantity = 999
         };
         
-        var response = await _client.PostAsync(
+        var response = await TestClients.AsUserAsync(
+            _client,
+            userID,
+            HttpMethod.Post,
             $"/api/users/{userID}/products", ToJsonContent(assignDTO));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -139,12 +148,15 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
             Quantity = 5
         };
 
-        await _client.PostAsync(
+        await TestClients.AsUserAsync(
+            _client,
+            userId,
+            HttpMethod.Post,
             $"/api/users/{userId}/products",
             ToJsonContent(assignDto)
         );
 
-        var response = await _client.DeleteAsync($"/api/users/{userId}/products/{productId}");
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Delete, $"/api/users/{userId}/products/{productId}");
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
@@ -153,7 +165,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
     public async Task Delete_NonExistent_Product_Assignment_Should_Return_NotFound()
     {
         var userId = await CreateTestUser();
-        var response = await _client.DeleteAsync($"/api/users/{userId}/products/99999");
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Delete, $"/api/users/{userId}/products/99999");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -161,7 +173,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
     public async Task Get_Products_For_NonExistent_User_Should_Return_Empty_List()
     {
 
-        var response = await _client.GetAsync("/api/users/99999/products");
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Get, "/api/users/99999/products");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Be("[]");

@@ -30,17 +30,17 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
     private string UniqueUsername() => $"user_{Guid.NewGuid().ToString().Substring(0, 8)}";
 
     [Fact]
-    public async Task Get_All_Users_Should_Return_Ok()
+    public async Task Get_All_Users_Should_Return_Forbidden_For_NonAdmin()
     {
         var response =  await _client.GetAsync("/api/User");
-        response.StatusCode.Should().Be(HttpStatusCode.OK); // 200 
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
-    public async Task Get_User_By_Nonexistent_Id_Should_Return_NotFound()
+    public async Task Get_User_By_Nonexistent_Id_Should_Return_Forbidden_For_Other_User()
     {
         var response = await _client.GetAsync("/api/User/99999");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
     
     [Fact]
@@ -54,13 +54,13 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             Email = UniqueEmail()
         };
         
-        var createResponse = await _client.PostAsync("/api/User", ToJsonContent(createUserDto));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(createUserDto));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var userId = jsonDoc.RootElement.GetProperty("id").GetInt32();
         
         // Act
-        var response = await _client.GetAsync($"/api/User/{userId}");
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Get, $"/api/User/{userId}");
         
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -83,7 +83,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var content = ToJsonContent(createUserDto);
         
-        var response = await _client.PostAsync("/api/User", content); 
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", content); 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         
         var responseContent = await response.Content.ReadAsStringAsync();
@@ -102,7 +102,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var content = ToJsonContent(createUserDtO);
         
-        var response = await _client.PostAsync("/api/User", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", content);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
@@ -119,7 +119,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var content = ToJsonContent(createUserDto);
         
-        await _client.PostAsync("/api/User", content);
+        await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", content);
         
         var duplicateDto = new CreateUserDTO
         {
@@ -128,7 +128,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             Email = email
         };
         
-        var second = await _client.PostAsync("/api/User", ToJsonContent(duplicateDto));
+        var second = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(duplicateDto));
         
         second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -144,7 +144,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         };
         
         var content = ToJsonContent(createUserDto);
-        var response = await _client.PostAsync("/api/User", content);
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", content);
         
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -159,7 +159,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             Email = UniqueEmail()
         };
         
-        var createResponse = await _client.PostAsync("/api/User", ToJsonContent(createUserDto));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(createUserDto));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var userId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -169,14 +169,14 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             UserName = "updatedname",
             Email = UniqueEmail()
         };
-        var response = await _client.PutAsync($"/api/User/{userId}", ToJsonContent(updateDto));
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Put, $"/api/User/{userId}", ToJsonContent(updateDto));
         
      
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
-    public async Task Update_User_With_Invalid_Id_Should_Return_NotFound()
+    public async Task Update_User_With_Invalid_Id_Should_Return_Forbidden_For_Other_User()
     {
         var updateDto = new UpdateUserDTO
         {
@@ -186,7 +186,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var response = await _client.PutAsync("/api/User/99999", ToJsonContent(updateDto));
         
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             Email = UniqueEmail()
         };
         
-        var createResponse = await _client.PostAsync("/api/User", ToJsonContent(createUserDto));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(createUserDto));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var userId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -211,7 +211,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             CurrentPassword = "OldPassword123!",
             NewPassword = "NewPassword123!"
         };
-        var response = await _client.PutAsync($"/api/User/{userId}/password", ToJsonContent(changePasswordDto));
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Put, $"/api/User/{userId}/password", ToJsonContent(changePasswordDto));
         
    
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -228,7 +228,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             Email = UniqueEmail()
         };
         
-        var createResponse = await _client.PostAsync("/api/User", ToJsonContent(createUserDto));
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(createUserDto));
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var jsonDoc = System.Text.Json.JsonDocument.Parse(createContent);
         var userId = jsonDoc.RootElement.GetProperty("id").GetInt32();
@@ -239,7 +239,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
             CurrentPassword = "WrongPassword123!",
             NewPassword = "NewPassword123!"
         };
-        var response = await _client.PutAsync($"/api/User/{userId}/password", ToJsonContent(changePasswordDto));
+        var response = await TestClients.AsUserAsync(_client, userId, HttpMethod.Put, $"/api/User/{userId}/password", ToJsonContent(changePasswordDto));
         
     
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
