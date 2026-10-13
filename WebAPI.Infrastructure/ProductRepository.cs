@@ -114,28 +114,53 @@ public class ProductRepository : IProductRepository
         await BumpListVersionAsync();
     }
 
-    public async Task UpdateAsync(Product prod)
+    public async Task<bool> UpdateAsync(Product prod)
     {
-        _dbContext.Products.Update(prod);
-        await _dbContext.SaveChangesAsync();
+        var stored = await _dbContext.Products.FindAsync(prod.ID);
+        if (stored is null)
+            return false;
 
-        await _cache.SetStringAsync(BuildItemCacheKey(prod.ID), JsonSerializer.Serialize(prod, CacheJsonOptions), ItemCacheOptions);
-        await BumpListVersionAsync();
-    }
+        stored.Name = prod.Name;
+        stored.Description = prod.Description;
+        stored.Price = prod.Price;
+        stored.RowVersion++;
 
-    public async Task DeleteAsync(int id)
-    {
-        var product = await _dbContext.Products.FindAsync(id);
-        if (product is null)
+        try
         {
-            return;
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
         }
 
+        await _cache.SetStringAsync(BuildItemCacheKey(stored.ID), JsonSerializer.Serialize(stored, CacheJsonOptions), ItemCacheOptions);
+        await BumpListVersionAsync();
+        return true;
+    }
+
+    public async Task<DeleteProductResult> DeleteAsync(int id)
+    {
+        if (await _dbContext.UserProducts.AnyAsync(assignment => assignment.ProductID == id))
+            return DeleteProductResult.Assigned;
+
+        var product = await _dbContext.Products.FindAsync(id);
+        if (product is null)
+            return DeleteProductResult.NotFound;
+
         _dbContext.Products.Remove(product);
-        await _dbContext.SaveChangesAsync();
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return DeleteProductResult.Assigned;
+        }
 
         await _cache.RemoveAsync(BuildItemCacheKey(id));
         await BumpListVersionAsync();
+        return DeleteProductResult.Deleted;
     }
 
     public async Task InvalidateCacheAsync(int productID)

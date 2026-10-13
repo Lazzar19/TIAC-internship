@@ -78,6 +78,14 @@ public class CreateProductDTOValidatorTests
     }
 
     [Fact]
+    public void Should_Pass_When_Stock_Is_Zero()
+    {
+        var dto = new CreatedProductDTO { Name = "Test", Price = 10, Stock = 0, Description = "test description" };
+        var result = validator.Validate(dto);
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void Should_Fail_When_Stock_Is_Negative()
     {
         var dto = new CreatedProductDTO { Name = "Test", Price = 10, Stock = -5, Description = "test description" };

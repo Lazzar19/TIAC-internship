@@ -34,8 +34,12 @@ public class UserProductController : ControllerBase
         return Ok(items.Select(up => up.ToDTO()));
     }
 
+    /// <summary>
+    /// Sets the total quantity of this product owned by the user.
+    /// Quantity replaces the previous total. It is not added to it.
+    /// </summary>
     [HttpPost]
-
+    [EndpointDescription("Quantity is the new total owned by this user, not an increment. Sending 2 after 5 sets the owned quantity to 2 and returns 3 units to stock.")]
     public async Task<ActionResult<UserProductDTO>> Assign(int userId, AsigningUserToProductDTO dto)
     {
         var denied = this.DenyUnlessOwnerOrAdmin(userId);
@@ -46,11 +50,14 @@ public class UserProductController : ControllerBase
 
         switch (result)
         {
+            case AssignProductResult.UserNotFound:
+                return NotFound($"User with ID: {userId} cannot be found");
             case AssignProductResult.ProductNotFound:
                 return NotFound($"Product with ID: {dto.ProductID} cannot be found");
-            
             case AssignProductResult.InsufficientStock:
                 return BadRequest($"Product with ID: {dto.ProductID} has insufficient stock");
+            case AssignProductResult.Conflict:
+                return Conflict("The product changed while assigning. Retry the request.");
         }
         var userProduct = await userProductRepository_.GetAsync(userId, dto.ProductID);
         return Ok(userProduct!.ToDTO());
@@ -68,7 +75,9 @@ public class UserProductController : ControllerBase
         var existing = await userProductRepository_.GetAsync(userId, productID);
         if (existing is null) return NotFound();
 
-        await userProductRepository_.DeleteAsync(existing);
+        var deleted = await userProductRepository_.DeleteAsync(existing);
+        if (!deleted) return NotFound();
+
         return NoContent();
 
     }

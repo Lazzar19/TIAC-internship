@@ -14,7 +14,7 @@ public sealed class CreateProductDTOValidator : AbstractValidator<CreatedProduct
       RuleFor(x => x.Price).GreaterThan(0).WithMessage("Price must be higher then zero");
 
       RuleFor(x => x.Description).NotEmpty().WithMessage("Description of a product is required");
-      RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("Stock cannot be zero or less");
+      RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("Stock cannot be negative");
       
    }
    

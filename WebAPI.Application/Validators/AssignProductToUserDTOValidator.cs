@@ -9,7 +9,7 @@ public sealed class AssignProductToUserDTOValidator : AbstractValidator<Asigning
     public AssignProductToUserDTOValidator()
     {
         RuleFor(x => x.ProductID).GreaterThan(0).WithMessage("Valid Product ID is required");
-        RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("Quantity must be greater than 10");
+        RuleFor(x => x.Quantity).GreaterThan(0).WithMessage("Quantity must be greater than 0");
     }
     
 }

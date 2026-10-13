@@ -43,6 +43,10 @@ namespace WebAPI.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
+                    b.Property<long>("RowVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.Property<int>("Stock")
                         .HasColumnType("integer");
 
@@ -150,7 +154,7 @@ namespace WebAPI.Infrastructure.Migrations
                     b.HasOne("WebAPI.Domain.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("WebAPI.Domain.User", "User")

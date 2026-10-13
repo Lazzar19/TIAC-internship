@@ -64,13 +64,26 @@ public class ProductController : ControllerBase
         already_existing.Name = prod.Name;
         already_existing.Description = prod.Description;
         already_existing.Price = prod.Price;
-        already_existing.Stock = prod.Stock;
-        
-        await productRepository_.UpdateAsync(already_existing);
+
+        var updated = await productRepository_.UpdateAsync(already_existing);
+        if (!updated)
+            return Conflict("The product was updated by someone else. Retry the request.");
+
         return NoContent();
 
     }
 
-   
+    [HttpDelete("{id}")]
+    [Authorize(Roles = CurrentUser.AdminRole)]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var result = await productRepository_.DeleteAsync(id);
+        return result switch
+        {
+            DeleteProductResult.NotFound => NotFound(),
+            DeleteProductResult.Assigned => Conflict("Product cannot be deleted while it is assigned to a user."),
+            _ => NoContent()
+        };
+    }
 
 }

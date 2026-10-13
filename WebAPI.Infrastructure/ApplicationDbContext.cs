@@ -19,6 +19,10 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
             .IsUnique();
+
+        modelBuilder.Entity<Product>()
+            .Property(product => product.RowVersion)
+            .IsConcurrencyToken();
         
         modelBuilder.Entity<UserProduct>(entity =>
         {
@@ -30,7 +34,8 @@ public class ApplicationDbContext : DbContext
 
             entity.HasOne(up => up.Product)
                 .WithMany()
-                .HasForeignKey(up => up.ProductID);
+                .HasForeignKey(up => up.ProductID)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 

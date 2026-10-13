@@ -178,5 +178,45 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Be("[]");
     }
+
+    [Fact]
+    public async Task Assigning_To_Missing_User_Should_Return_NotFound()
+    {
+        var productId = await CreateTestProduct();
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/users/99999/products", ToJsonContent(new AsigningUserToProductDTO
+        {
+            ProductID = productId,
+            Quantity = 1
+        }));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Second_Assign_Replaces_Quantity_And_Returns_Stock()
+    {
+        var userId = await CreateTestUser();
+        var productId = await CreateTestProduct();
+
+        var first = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        {
+            ProductID = productId,
+            Quantity = 5
+        }));
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var second = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        {
+            ProductID = productId,
+            Quantity = 2
+        }));
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        var assignment = System.Text.Json.JsonDocument.Parse(await second.Content.ReadAsStringAsync());
+        assignment.RootElement.GetProperty("quantity").GetInt32().Should().Be(2);
+
+        var product = await _client.GetAsync($"/api/Product/{productId}");
+        var productJson = System.Text.Json.JsonDocument.Parse(await product.Content.ReadAsStringAsync());
+        productJson.RootElement.GetProperty("stock").GetInt32().Should().Be(48);
+    }
 }
 

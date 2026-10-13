@@ -5,8 +5,10 @@ using WebAPI.Domain;
 public enum AssignProductResult
 {
     Success,
+    UserNotFound,
     ProductNotFound,
-    InsufficientStock
+    InsufficientStock,
+    Conflict
 }
 
 public interface IUserProductRepository
@@ -15,5 +17,5 @@ public interface IUserProductRepository
     Task<UserProduct?> GetAsync(int userID, int productID);
    
     Task<AssignProductResult> AssignAsync(int userId, int productId, int quantity);
-    Task DeleteAsync(UserProduct userProduct);
+    Task<bool> DeleteAsync(UserProduct userProduct);
 }

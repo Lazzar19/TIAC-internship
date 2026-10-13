@@ -69,8 +69,19 @@ public class UserRepository : IUserRepository
 
         foreach (var assignment in assignments)
         {
-            if (products.TryGetValue(assignment.ProductID, out var product))
+            if (dbContext_.Database.IsRelational())
+            {
+                await dbContext_.Products
+                    .Where(product => product.ID == assignment.ProductID)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(product => product.Stock, product => product.Stock + assignment.NumberOfProducts)
+                        .SetProperty(product => product.RowVersion, product => product.RowVersion + 1));
+            }
+            else if (products.TryGetValue(assignment.ProductID, out var product))
+            {
                 product.Stock += assignment.NumberOfProducts;
+                product.RowVersion++;
+            }
         }
 
         dbContext_.UserProducts.RemoveRange(assignments);

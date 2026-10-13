@@ -68,7 +68,7 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ JWT authentication (register/login) with hashed passwords (PBKDF2 + salt + `FixedTimeEquals` comparison resistant to timing attacks)
 - ✅ Refresh token rotation with revocation support (login, refresh, logout)
 - ✅ Rate limiting on authentication endpoints (5 requests/min per IP) to mitigate brute-force attacks
-- ✅ Stock validation and atomic inventory decrement on product assignment, with automatic stock restoration on unassignment
+- ✅ Stock changes only through assignment and unassignment. A conditional database update rejects a sale when stock is no longer available, and `RowVersion` rejects a conflicting product edit with HTTP 409
 - ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`)
 - ✅ Redis-backed caching for product reads with version-based cache invalidation on writes
 - ✅ Structured logging via Serilog (console sink, per-request request/response logging)
@@ -194,8 +194,8 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `GET` | `/api/product` | List products (pagination + filtering) | Yes |
 | `GET` | `/api/product/{id}` | Get product details | Yes |
 | `POST` | `/api/product` | Create a product | Yes (Admin) |
-| `PUT` | `/api/product/{id}` | Update a product | Yes (Admin) |
-| `DELETE` | `/api/product/{id}` | Delete a product | Yes (Admin) |
+| `PUT` | `/api/product/{id}` | Update name, description, and price. Stock is unchanged | Yes (Admin) |
+| `DELETE` | `/api/product/{id}` | Delete a product. 409 while any user still owns units | Yes (Admin) |
 | `GET` | `/api/user` | List users | Yes (Admin) |
 | `GET` | `/api/user/me` | Current user from the access token | Yes |
 | `GET` | `/api/user/{id}` | User details | Yes (self or Admin) |
@@ -204,7 +204,7 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `PUT` | `/api/user/{id}/password` | Change password | Yes (self or Admin) |
 | `DELETE` | `/api/user/{id}` | Delete a user | Yes (Admin) |
 | `GET` | `/api/users/{userId}/products` | Products assigned to a user | Yes (self or Admin) |
-| `POST` | `/api/users/{userId}/products` | Assign a product to a user (validates stock) | Yes (self or Admin) |
+| `POST` | `/api/users/{userId}/products` | Set the total quantity a user owns. Replaces the previous quantity and adjusts stock by the difference | Yes (self or Admin) |
 | `DELETE` | `/api/users/{userId}/products/{productId}` | Unassign a product, restoring stock | Yes (self or Admin) |
 | `GET` | `/health` | Health check for container orchestration | No |
 
@@ -242,7 +242,6 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on eve
 
 ## Future Improvements
 
-- Optimistic concurrency (e.g. a `RowVersion` column) to fully eliminate stock race conditions under high concurrent load
 - CORS policy configuration for browser-based clients
 - API versioning (`/api/v1/...`)
 - Soft delete for products and users, with audit history

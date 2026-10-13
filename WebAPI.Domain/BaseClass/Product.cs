@@ -10,6 +10,7 @@ public class Product
     public decimal Price  { get; set; }
     public String? Description { get; set; } = String.Empty; // String? can be nullable 
     public int Stock { get; set; }
+    public long RowVersion { get; set; }
     public DateTime CreatedAt { get; set; }
     
     //public string Code { get; set; } = string.Empty;
