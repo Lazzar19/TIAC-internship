@@ -10,7 +10,7 @@ public class PageLimitsTests
     [InlineData(-1)]
     public void Page_Number_And_Size_Below_One_Become_One(int value)
     {
-        var query = new ProductQuerryParametars
+        var query = new ProductQueryParameters
         {
             PageNumber = value,
             PageSize = value
@@ -25,7 +25,7 @@ public class PageLimitsTests
     [Fact]
     public void Page_Size_Above_50_Becomes_50()
     {
-        var query = new ProductQuerryParametars { PageSize = 10_000 };
+        var query = new ProductQueryParameters { PageSize = 10_000 };
 
         query.PageSize.Should().Be(50);
         PageLimits.PageSize(10_000).Should().Be(50);

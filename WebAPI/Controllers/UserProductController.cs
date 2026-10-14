@@ -40,7 +40,7 @@ public class UserProductController : ControllerBase
     /// </summary>
     [HttpPost]
     [EndpointDescription("Quantity is the new total owned by this user, not an increment. Sending 2 after 5 sets the owned quantity to 2 and returns 3 units to stock.")]
-    public async Task<ActionResult<UserProductDTO>> Assign(int userId, AsigningUserToProductDTO dto)
+    public async Task<ActionResult<UserProductDTO>> Assign(int userId, AssignProductToUserDTO dto)
     {
         var denied = this.DenyUnlessOwnerOrAdmin(userId);
         if (denied is not null)
@@ -51,13 +51,13 @@ public class UserProductController : ControllerBase
         switch (result)
         {
             case AssignProductResult.UserNotFound:
-                return NotFound($"User with ID: {userId} cannot be found");
+                return this.ApiProblem(StatusCodes.Status404NotFound, $"User with ID: {userId} cannot be found");
             case AssignProductResult.ProductNotFound:
-                return NotFound($"Product with ID: {dto.ProductID} cannot be found");
+                return this.ApiProblem(StatusCodes.Status404NotFound, $"Product with ID: {dto.ProductID} cannot be found");
             case AssignProductResult.InsufficientStock:
-                return BadRequest($"Product with ID: {dto.ProductID} has insufficient stock");
+                return this.ApiProblem(StatusCodes.Status400BadRequest, $"Product with ID: {dto.ProductID} has insufficient stock");
             case AssignProductResult.Conflict:
-                return Conflict("The product changed while assigning. Retry the request.");
+                return this.ApiProblem(StatusCodes.Status409Conflict, "The product changed while assigning. Retry the request.");
         }
         var userProduct = await userProductRepository_.GetAsync(userId, dto.ProductID);
         return Ok(userProduct!.ToDTO());
@@ -73,10 +73,12 @@ public class UserProductController : ControllerBase
             return denied;
 
         var existing = await userProductRepository_.GetAsync(userId, productID);
-        if (existing is null) return NotFound();
+        if (existing is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "Assignment was not found.");
 
         var deleted = await userProductRepository_.DeleteAsync(existing);
-        if (!deleted) return NotFound();
+        if (!deleted)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "Assignment was not found.");
 
         return NoContent();
 

@@ -31,7 +31,7 @@ using Serilog;
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(); // swagger 
+    builder.Services.AddSwaggerGen();
 
     builder.Services.AddSwaggerGen(options =>
     {
@@ -54,7 +54,6 @@ using Serilog;
     });
 
 
-    // database
     builder.Services.AddDatabase(builder.Configuration);
     builder.Services.AddApplicationCache(builder.Configuration);
 
@@ -78,7 +77,6 @@ using Serilog;
 
 
 
-    // fluent validation 
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateProductDTOValidator>();
     builder.Services.AddValidatorsFromAssemblyContaining<UpdateProductDTOValidator>();
@@ -88,7 +86,6 @@ using Serilog;
     builder.Services.AddValidatorsFromAssemblyContaining<ChangePasswordDTOValidator>();
 
 
-    // JWT auth
 
     var jwtSettings_ = builder.Configuration.GetSection("Jwt");
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -132,9 +129,9 @@ using Serilog;
 
     var app = builder.Build();
 
-    app.UseSerilogRequestLogging(); // SeriLog 
+    app.UseSerilogRequestLogging();
 
-    app.UseMiddleware<ExceptionHandlingMiddleware>(); // middleware exception handling 
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 
 
@@ -147,7 +144,7 @@ using Serilog;
             dbContext.Database.EnsureCreated();
         } else if(providerName != "Microsoft.EntityFrameworkCore.InMemory")
         {
-            dbContext.Database.Migrate(); // postgres production
+            dbContext.Database.Migrate();
         }
 
         await AdminUserSeeder.SeedAsync(
@@ -157,7 +154,6 @@ using Serilog;
             app.Logger);
     }
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();

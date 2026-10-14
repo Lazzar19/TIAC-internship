@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Tests.Integration_Tests;
@@ -129,8 +130,11 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         };
         
         var second = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(duplicateDto));
-        
+
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var problem = await second.Content.ReadFromJsonAsync<Microsoft.AspNetCore.Mvc.ProblemDetails>(
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        problem!.Detail.Should().Be("Email already exists.");
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Get_Product_By_Valid_Id_Should_Return_Ok()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "test description",
@@ -64,7 +64,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Create_Product_With_Valid_Data_Should_Return_Created()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "test description",
@@ -84,7 +84,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Create_Product_With_Invalid_Data_Should_Return_BadRequest()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = "",
             Description = "",
@@ -101,7 +101,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Create_Product_With_Negative_Price_Should_Return_BadRequest()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "test description",
@@ -118,7 +118,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Create_Product_With_Negative_Stock_Should_Return_BadRequest()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "test description",
@@ -135,7 +135,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Update_Product_With_Valid_Data_Should_Return_NoContent()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "original description",
@@ -178,7 +178,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Update_Product_With_Invalid_Data_Should_Return_BadRequest()
     {
-        var createProductDTO = new CreatedProductDTO
+        var createProductDTO = new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "original description",
@@ -206,7 +206,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Update_Product_Does_Not_Change_Stock()
     {
-        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "original description",
@@ -232,7 +232,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Create_Product_With_Zero_Stock_Should_Return_Created()
     {
-        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "empty shelf",
@@ -246,7 +246,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
     [Fact]
     public async Task Delete_Product_Without_Assignments_Should_Return_NoContent()
     {
-        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "to delete",
@@ -272,7 +272,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
         var userJson = System.Text.Json.JsonDocument.Parse(await userResponse.Content.ReadAsStringAsync());
         var userId = userJson.RootElement.GetProperty("id").GetInt32();
 
-        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var createResponse = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = UniqueName(),
             Description = "assigned",
@@ -282,7 +282,7 @@ public class ProductControllerIntegrationTests : IClassFixture<CustomWebApplicat
         var created = System.Text.Json.JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
         var productId = created.RootElement.GetProperty("id").GetInt32();
 
-        var assign = await TestClients.AsAdminAsync(_client, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        var assign = await TestClients.AsAdminAsync(_client, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 1

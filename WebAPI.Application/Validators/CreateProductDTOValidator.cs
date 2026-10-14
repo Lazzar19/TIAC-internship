@@ -4,7 +4,7 @@ using WebAPI.Domain;
 namespace WebAPI.Application.Validators;
 
 
-public sealed class CreateProductDTOValidator : AbstractValidator<CreatedProductDTO>
+public sealed class CreateProductDTOValidator : AbstractValidator<CreateProductDTO>
 {
    public CreateProductDTOValidator()
    {

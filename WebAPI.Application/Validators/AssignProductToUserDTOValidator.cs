@@ -3,7 +3,7 @@ using WebAPI.Domain;
 
 namespace WebAPI.Application.Validators;
 
-public sealed class AssignProductToUserDTOValidator : AbstractValidator<AsigningUserToProductDTO>
+public sealed class AssignProductToUserDTOValidator : AbstractValidator<AssignProductToUserDTO>
 {
 
     public AssignProductToUserDTOValidator()

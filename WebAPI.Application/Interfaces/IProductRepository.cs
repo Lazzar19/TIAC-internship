@@ -12,11 +12,11 @@ public enum DeleteProductResult
 public interface IProductRepository
 {
        
-    Task<PageResult<Product>> GetAllAsync(ProductQuerryParametars queryParametars);  
-    Task<Product?> GetByIDAsync(int id); // Product? can be null 
-    Task AddAsync(Product prod); // post 
-    Task<bool> UpdateAsync(Product prod); // put 
-    Task<DeleteProductResult> DeleteAsync(int id); // delete 
+    Task<PageResult<Product>> GetAllAsync(ProductQueryParameters queryParameters);
+    Task<Product?> GetByIDAsync(int id);
+    Task AddAsync(Product prod);
+    Task<bool> UpdateAsync(Product prod);
+    Task<DeleteProductResult> DeleteAsync(int id);
 
     Task InvalidateCacheAsync(int productID);
 

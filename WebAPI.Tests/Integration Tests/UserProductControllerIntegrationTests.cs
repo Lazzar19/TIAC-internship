@@ -44,7 +44,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
 
     private async Task<int> CreateTestProduct()
     {
-        var productDto = new CreatedProductDTO
+        var productDto = new CreateProductDTO
         {
             Name = UniqueProductName(),
             Description = "test product",
@@ -74,7 +74,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         var userId = await CreateTestUser();
         var productId = await CreateTestProduct();
 
-        var assignDto = new AsigningUserToProductDTO
+        var assignDto = new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 5
@@ -99,7 +99,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
     public async Task Assigning_NonExistent_Product_Should_Return_NotFound()
     {
         var userID = await CreateTestUser();
-        var assignDTO = new AsigningUserToProductDTO
+        var assignDTO = new AssignProductToUserDTO
         {
             ProductID = 9999,
             Quantity = 5
@@ -121,7 +121,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         var userID = await CreateTestUser();
         var productID =  await CreateTestProduct();
 
-        var assignDTO = new AsigningUserToProductDTO
+        var assignDTO = new AssignProductToUserDTO
         {
             ProductID = productID,
             Quantity = 999
@@ -142,7 +142,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         var userId = await CreateTestUser();
         var productId = await CreateTestProduct();
 
-        var assignDto = new AsigningUserToProductDTO
+        var assignDto = new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 5
@@ -183,7 +183,7 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
     public async Task Assigning_To_Missing_User_Should_Return_NotFound()
     {
         var productId = await CreateTestProduct();
-        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/users/99999/products", ToJsonContent(new AsigningUserToProductDTO
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/users/99999/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 1
@@ -198,14 +198,14 @@ public class UserProductControllerIntegrationTests : IClassFixture<CustomWebAppl
         var userId = await CreateTestUser();
         var productId = await CreateTestProduct();
 
-        var first = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        var first = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 5
         }));
         first.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var second = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        var second = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 2

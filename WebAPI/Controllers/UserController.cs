@@ -49,10 +49,13 @@ public class UserController : ControllerBase
     public async Task<ActionResult<UserDTO>> Me()
     {
         if (!CurrentUser.TryGetId(User, out var userId))
-            return Unauthorized();
+            return this.ApiProblem(StatusCodes.Status401Unauthorized, "Authentication is required.");
 
         var user = await userRepository_.GetByIDAsync(userId);
-        return user is null ? NotFound() : Ok(user.ToDTO());
+        if (user is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
+
+        return Ok(user.ToDTO());
     }
 
     [HttpGet("{id:int}")]
@@ -63,7 +66,10 @@ public class UserController : ControllerBase
             return denied;
 
         var user = await userRepository_.GetByIDAsync(id);
-        return user is null ? NotFound() : Ok(user.ToDTO());
+        if (user is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
+
+        return Ok(user.ToDTO());
     }
 
     [HttpPost]
@@ -72,7 +78,7 @@ public class UserController : ControllerBase
     {
         if (await userRepository_.EmailExistsAsync(dto.Email))
         {
-            return Conflict("Email already exists.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
 
         var newUser = new User
@@ -88,7 +94,7 @@ public class UserController : ControllerBase
         }
         catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
         {
-            return Conflict("Email already exists.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
 
         return CreatedAtAction(nameof(GetById), new { id = newUser.ID }, newUser.ToDTO());
@@ -104,12 +110,13 @@ public class UserController : ControllerBase
             return denied;
 
         var alreadyExisting = await userRepository_.GetByIDAsync(id);
-        if (alreadyExisting is null) return NotFound();
+        if (alreadyExisting is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
 
         if (!string.Equals(alreadyExisting.Email, dto.Email, StringComparison.OrdinalIgnoreCase) &&
             await userRepository_.EmailExistsAsync(dto.Email))
         {
-            return Conflict("Email already exists.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
 
         alreadyExisting.Username = dto.UserName;
@@ -121,7 +128,7 @@ public class UserController : ControllerBase
         }
         catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
         {
-            return Conflict("Email already exists.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
 
         return NoContent();
@@ -137,12 +144,11 @@ public class UserController : ControllerBase
             return denied;
 
         var user = await userRepository_.GetByIDAsync(id);
-        if (user is null) return NotFound();
+        if (user is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
 
         if (!passwordHasher_.Verify(user.PasswordHash, dto.CurrentPassword))
-        {
-            return BadRequest("Current password is incorrect");
-        }
+            return this.ApiProblem(StatusCodes.Status400BadRequest, "Current password is incorrect");
         
         user.PasswordHash = passwordHasher_.Hash(dto.NewPassword);
         
@@ -158,7 +164,8 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeleteAsync(int id)
     {
         var user = await userRepository_.GetByIDAsync(id);
-        if (user is null) return NotFound();
+        if (user is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
 
         await userRepository_.DeleteAsync(user);
         return NoContent();

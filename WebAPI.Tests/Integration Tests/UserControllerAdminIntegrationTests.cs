@@ -79,7 +79,7 @@ public class UserControllerAdminIntegrationTests : IClassFixture<AdminTestWebApp
         var userId = await CreateUser();
         var productId = await CreateProduct(stock: 50);
 
-        var assign = await _client.PostAsync($"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        var assign = await _client.PostAsync($"/api/users/{userId}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 5
@@ -115,7 +115,7 @@ public class UserControllerAdminIntegrationTests : IClassFixture<AdminTestWebApp
 
     private async Task<int> CreateProduct(int stock)
     {
-        var response = await _client.PostAsync("/api/Product", ToJsonContent(new CreatedProductDTO
+        var response = await _client.PostAsync("/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = $"stock_{Guid.NewGuid().ToString()[..8]}",
             Description = "stock restore",

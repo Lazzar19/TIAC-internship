@@ -14,7 +14,7 @@
       - Redis__Configuration=redis:6379,abortConnect=false
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=WebAPI
-      - Jwt__Audience=WebAPIUsers
+      - Jwt__Audience=WebApiUsers
       - Admin__Email=${ADMIN_EMAIL:-}
       - Admin__Password=${ADMIN_PASSWORD:-}
     volumes:

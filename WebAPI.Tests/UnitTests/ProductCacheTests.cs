@@ -33,7 +33,7 @@ public class ProductCacheTests
         await context.SaveChangesAsync();
         var userId = (await context.Users.SingleAsync()).ID;
 
-        var before = await products.GetAllAsync(new ProductQuerryParametars());
+        var before = await products.GetAllAsync(new ProductQueryParameters());
         before.Items.Should().ContainSingle().Which.Name.Should().Be("Desk");
 
         var updated = await products.UpdateAsync(new Product
@@ -48,7 +48,7 @@ public class ProductCacheTests
         var assigned = await assignments.AssignAsync(userId, product.ID, 5);
         assigned.Should().Be(AssignProductResult.Success);
 
-        var after = await products.GetAllAsync(new ProductQuerryParametars());
+        var after = await products.GetAllAsync(new ProductQueryParameters());
         var item = after.Items.Should().ContainSingle().Subject;
         item.Name.Should().Be("Table");
         item.Stock.Should().Be(15);
@@ -69,7 +69,7 @@ public class ProductCacheTests
         await context.SaveChangesAsync();
 
         var repository = new ProductRepository(context, new ThrowingDistributedCache(), NullLogger<ProductRepository>.Instance);
-        var page = await repository.GetAllAsync(new ProductQuerryParametars());
+        var page = await repository.GetAllAsync(new ProductQueryParameters());
 
         page.Items.Should().ContainSingle().Which.Name.Should().Be("Lamp");
     }

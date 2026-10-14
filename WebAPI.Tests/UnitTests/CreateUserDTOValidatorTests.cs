@@ -5,7 +5,7 @@ using FluentAssertions;
 
 namespace WebAPI.Tests;
 
-public class CreatUserDTOValidatorTests
+public class CreateUserDTOValidatorTests
 {
     private readonly CreateUserDTOValidator validator = new();
 

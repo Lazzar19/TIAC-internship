@@ -41,13 +41,13 @@ public class ProductRepository : IProductRepository
         _logger = logger ?? NullLogger<ProductRepository>.Instance;
     }
 
-    public async Task<PageResult<Product>> GetAllAsync(ProductQuerryParametars queryParametars)
+    public async Task<PageResult<Product>> GetAllAsync(ProductQueryParameters queryParameters)
     {
         var versionRead = await TryGetStringAsync(ListVersionKey);
         if (versionRead.Ok)
         {
             var version = string.IsNullOrEmpty(versionRead.Value) ? "1" : versionRead.Value;
-            var cacheKey = BuildListCacheKey(version, queryParametars);
+            var cacheKey = BuildListCacheKey(version, queryParameters);
             var cachedResult = await TryGetStringAsync(cacheKey);
 
             if (cachedResult.Ok && !string.IsNullOrWhiteSpace(cachedResult.Value))
@@ -57,7 +57,7 @@ public class ProductRepository : IProductRepository
                     return cachedPage;
             }
 
-            var result = await QueryPageAsync(queryParametars);
+            var result = await QueryPageAsync(queryParameters);
             if (cachedResult.Ok)
             {
                 await TrySetStringAsync(
@@ -69,34 +69,34 @@ public class ProductRepository : IProductRepository
             return result;
         }
 
-        return await QueryPageAsync(queryParametars);
+        return await QueryPageAsync(queryParameters);
     }
 
-    private async Task<PageResult<Product>> QueryPageAsync(ProductQuerryParametars queryParametars)
+    private async Task<PageResult<Product>> QueryPageAsync(ProductQueryParameters queryParameters)
     {
 
         var query = _dbContext.Products.AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(queryParametars.Search))
-            query = query.Where(p => p.Name.Contains(queryParametars.Search));
+        if (!string.IsNullOrWhiteSpace(queryParameters.Search))
+            query = query.Where(p => p.Name.Contains(queryParameters.Search));
 
-        if (queryParametars.MinPrice.HasValue)
-            query = query.Where(p => p.Price >= queryParametars.MinPrice.Value);
+        if (queryParameters.MinPrice.HasValue)
+            query = query.Where(p => p.Price >= queryParameters.MinPrice.Value);
 
-        if (queryParametars.MaxPrice.HasValue)
-            query = query.Where(p => p.Price <= queryParametars.MaxPrice.Value);
+        if (queryParameters.MaxPrice.HasValue)
+            query = query.Where(p => p.Price <= queryParameters.MaxPrice.Value);
 
         var count = await query.CountAsync();
 
-        var items = await query.Skip((queryParametars.PageNumber - 1) * queryParametars.PageSize)
-            .Take(queryParametars.PageSize)
+        var items = await query.Skip((queryParameters.PageNumber - 1) * queryParameters.PageSize)
+            .Take(queryParameters.PageSize)
             .ToListAsync();
 
         return new PageResult<Product>
         {
             Items = items,
-            PageNumber = queryParametars.PageNumber,
-            PageSize = queryParametars.PageSize,
+            PageNumber = queryParameters.PageNumber,
+            PageSize = queryParameters.PageSize,
             TotalCount = count
         };
     }
@@ -248,9 +248,9 @@ public class ProductRepository : IProductRepository
 
     private static string BuildItemCacheKey(int id) => $"products:item:{id}";
 
-    private static string BuildListCacheKey(string version, ProductQuerryParametars queryParametars)
+    private static string BuildListCacheKey(string version, ProductQueryParameters queryParameters)
     {
-        return $"products:list:{version}:{queryParametars.PageNumber}:{queryParametars.PageSize}:{Normalize(queryParametars.Search)}:{Normalize(queryParametars.MinPrice)}:{Normalize(queryParametars.MaxPrice)}";
+        return $"products:list:{version}:{queryParameters.PageNumber}:{queryParameters.PageSize}:{Normalize(queryParameters.Search)}:{Normalize(queryParameters.MinPrice)}:{Normalize(queryParameters.MaxPrice)}";
     }
     
     private static string Normalize(string? value)

@@ -1,6 +1,6 @@
 ﻿namespace WebAPI.Domain;
 
-public class ProductQuerryParametars
+public class ProductQueryParameters
 {
     private int pageNumber_ = 1;
     private int pageSize_ = 10;

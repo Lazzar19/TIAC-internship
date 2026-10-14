@@ -21,7 +21,6 @@ public static class UserMappingExtensions
            Username = dto.Username,
            Email = dto.Email,
            PasswordHash = dto.Password
-            // temporarily empty, hash will come with JWT auth
         };
     }
 
@@ -36,9 +35,7 @@ public static class UserMappingExtensions
         };
     }
 
-    public static UserProduct ToEntity(this AsigningUserToProductDTO dto, int userID)
-    // userID must be paramter for this function, cuz we dont have userID included in AsigningUserToProductDTO class 
-    // userID can be extracted from URL, thats why we pass it like parametar
+    public static UserProduct ToEntity(this AssignProductToUserDTO dto, int userID)
     {
         return new UserProduct
         {

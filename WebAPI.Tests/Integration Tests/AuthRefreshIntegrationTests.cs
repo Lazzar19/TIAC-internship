@@ -53,7 +53,7 @@ public class AuthRefreshReuseIntegrationTests : IClassFixture<JwtWebApplicationF
             Email = email,
             Password = password
         });
-        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        register.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var login = await _client.PostAsJsonAsync("/api/auth/login", new LoginDTO
         {
@@ -117,7 +117,7 @@ public class AuthPasswordChangeIntegrationTests : IClassFixture<JwtWebApplicatio
             Email = email,
             Password = password
         });
-        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        register.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var login = await _client.PostAsJsonAsync("/api/auth/login", new LoginDTO
         {

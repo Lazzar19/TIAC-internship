@@ -38,7 +38,7 @@ public class OwnershipIntegrationTests : IClassFixture<CustomWebApplicationFacto
 
     private async Task<int> CreateProductAsAdmin()
     {
-        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var response = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = $"product_{Guid.NewGuid():N}"[..16],
             Description = "owned product",
@@ -91,7 +91,7 @@ public class OwnershipIntegrationTests : IClassFixture<CustomWebApplicationFacto
         var productId = await CreateProductAsAdmin();
 
         var list = await TestClients.AsUserAsync(_client, userA, HttpMethod.Get, $"/api/users/{userB}/products");
-        var assign = await TestClients.AsUserAsync(_client, userA, HttpMethod.Post, $"/api/users/{userB}/products", ToJsonContent(new AsigningUserToProductDTO
+        var assign = await TestClients.AsUserAsync(_client, userA, HttpMethod.Post, $"/api/users/{userB}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 1
@@ -114,7 +114,7 @@ public class OwnershipIntegrationTests : IClassFixture<CustomWebApplicationFacto
             Password = "testpassword123!",
             Email = UniqueEmail()
         }));
-        var createProduct = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, "/api/Product", ToJsonContent(new CreatedProductDTO
+        var createProduct = await TestClients.AsUserAsync(_client, userId, HttpMethod.Post, "/api/Product", ToJsonContent(new CreateProductDTO
         {
             Name = "blocked",
             Description = "blocked product",
@@ -156,7 +156,7 @@ public class OwnershipIntegrationTests : IClassFixture<CustomWebApplicationFacto
             CurrentPassword = "testpassword123!",
             NewPassword = "NewPassword123!"
         }));
-        var assign = await TestClients.AsAdminAsync(_client, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AsigningUserToProductDTO
+        var assign = await TestClients.AsAdminAsync(_client, HttpMethod.Post, $"/api/users/{userId}/products", ToJsonContent(new AssignProductToUserDTO
         {
             ProductID = productId,
             Quantity = 1

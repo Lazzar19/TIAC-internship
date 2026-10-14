@@ -187,7 +187,7 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 
 | Method | Route | Description | Auth Required |
 |---|---|---|---|
-| `POST` | `/api/auth/register` | Register a new user | No |
+| `POST` | `/api/auth/register` | Register a new user. Returns 201 | No |
 | `POST` | `/api/auth/login` | Log in, returns access + refresh tokens | No |
 | `POST` | `/api/auth/refresh` | Exchange a valid refresh token for a new token pair | No |
 | `POST` | `/api/auth/logout` | Revoke all refresh tokens for the user in the access token | Yes |
@@ -219,7 +219,9 @@ The API uses **JWT Bearer** authentication with refresh token rotation. After a 
 
 After logout the access token stays valid until it expires (30 minutes). Logout revokes refresh tokens, so they can no longer extend the session.
 
-Passwords are stored exclusively as **PBKDF2 hashes** (HMAC-SHA256, 128-bit random salt per user) — never as plain text. New hashes use 600,000 iterations and store that count, so it can be raised later. Older `salt-subkey` hashes still verify at 100,000 iterations. A password must be 12 to 128 characters. Login and refresh endpoints are rate-limited to mitigate brute-force attacks.
+Passwords are stored exclusively as **PBKDF2 hashes** (HMAC-SHA256, 128-bit random salt per user) — never as plain text. New hashes use 600,000 iterations and store that count, so it can be raised later. Older `salt-subkey` hashes still verify at 100,000 iterations. A password must be 12 to 128 characters. Register, login, and refresh are rate-limited to mitigate brute-force attacks. The limit uses the connection's remote IP. Forwarded headers are not enabled, because this API is not configured to run behind a trusted proxy.
+
+Error responses use `ProblemDetails`. The message is in `detail`, and an unhandled error is HTTP 500 in the same shape, with `traceId` and without a stack trace.
 
 ## Testing
 

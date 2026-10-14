@@ -41,7 +41,7 @@ public class AdminSeedIntegrationTests : IClassFixture<AdminSeedWebApplicationFa
             password = "testpassword123!",
             role = "Admin"
         });
-        register.StatusCode.Should().Be(HttpStatusCode.OK);
+        register.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = JsonDocument.Parse(await register.Content.ReadAsStringAsync());
         var userId = created.RootElement.GetProperty("id").GetInt32();
 

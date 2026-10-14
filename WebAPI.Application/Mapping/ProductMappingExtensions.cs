@@ -15,7 +15,7 @@ public static  class ProductMappingExtensions
         };
     }
 
-    public static Product ToEntity(this CreatedProductDTO dto)
+    public static Product ToEntity(this CreateProductDTO dto)
     {
         return new Product
         {

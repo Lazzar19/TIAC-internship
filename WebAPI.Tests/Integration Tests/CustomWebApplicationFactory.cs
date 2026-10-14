@@ -42,7 +42,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(coreDescriptor);
             }
 
-            // Add an in-memory database for testing - 
             services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseInMemoryDatabase(_dbName);

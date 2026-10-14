@@ -35,13 +35,11 @@ public class AuthController : ControllerBase
 
 
     [HttpPost("register")]
-
+    [EnableRateLimiting("auth")]
     public async Task<ActionResult<UserDTO>> Register(CreateUserDTO dto)
     {
         if (await userRepository_.EmailExistsAsync(dto.Email))
-        {
-            return Conflict("Email already exists.");
-        }
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
 
         var user =  new User
         {
@@ -56,10 +54,14 @@ public class AuthController : ControllerBase
         }
         catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
         {
-            return Conflict("Email already exists.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
 
-        return Ok(user.ToDTO());
+        return CreatedAtAction(
+            nameof(UserController.GetById),
+            "User",
+            new { id = user.ID },
+            user.ToDTO());
 
     }
 
@@ -71,7 +73,7 @@ public class AuthController : ControllerBase
         var user_ = await userRepository_.GetByEmailAsync(dto.Email);
         
         if (user_ == null || !passwordHasher_.Verify(user_.PasswordHash, dto.Password))
-            return Unauthorized("Invalid email or password");
+            return this.ApiProblem(StatusCodes.Status401Unauthorized, "Invalid email or password");
 
         var token_ = tokenService_.GenerateToken(user_);
         var refreshTokenValue = tokenService_.GenerateRefreshToken();
@@ -104,7 +106,7 @@ public class AuthController : ControllerBase
         var rotation = await refreshTokenRepository_.RotateAsync(dto.RefreshToken, newRefreshTokenValue, DateTime.UtcNow);
 
         if (!rotation.Succeeded || rotation.User is null)
-            return Unauthorized("Invalid or expired refresh token");
+            return this.ApiProblem(StatusCodes.Status401Unauthorized, "Invalid or expired refresh token");
 
         return Ok(new AuthResponseDTO
         {
@@ -119,7 +121,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout()
     {
         if (!CurrentUser.TryGetId(User, out var userId))
-            return Unauthorized();
+            return this.ApiProblem(StatusCodes.Status401Unauthorized, "Authentication is required.");
 
         await refreshTokenRepository_.RevokeAllByUserIdAsync(userId);
 

@@ -19,10 +19,10 @@ public class ProductController : ControllerBase
         productRepository_ = productRepository;
     }
 
-    [HttpGet] // get all 
-    public async Task<ActionResult<PageResult<ProductDTO>>> GetAll([FromQuery] ProductQuerryParametars querryParametars)
+    [HttpGet]
+    public async Task<ActionResult<PageResult<ProductDTO>>> GetAll([FromQuery] ProductQueryParameters queryParameters)
     {
-        var result = await productRepository_.GetAllAsync(querryParametars);
+        var result = await productRepository_.GetAllAsync(queryParameters);
 
         var DTOresult = new PageResult<ProductDTO>
         {
@@ -40,12 +40,15 @@ public class ProductController : ControllerBase
     public async Task<ActionResult<ProductDTO>> GetById(int id)
     {
         var prod = await productRepository_.GetByIDAsync(id);
-        return prod is null ? NotFound() : Ok(prod.ToDTO()); // just checking if there is actually a prod
+        if (prod is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found.");
+
+        return Ok(prod.ToDTO());
     }
 
     [HttpPost]
     [Authorize(Roles = CurrentUser.AdminRole)]
-    public async Task<ActionResult<ProductDTO>> Post(CreatedProductDTO prodDTO)
+    public async Task<ActionResult<ProductDTO>> Post(CreateProductDTO prodDTO)
     {
        var product = prodDTO.ToEntity();
         
@@ -59,7 +62,8 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> Put(int id, UpdateProductDTO prod)
     {
         var already_existing = await productRepository_.GetByIDAsync(id);
-        if(already_existing is null) return NotFound();
+        if (already_existing is null)
+            return this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found.");
         
         already_existing.Name = prod.Name;
         already_existing.Description = prod.Description;
@@ -67,7 +71,7 @@ public class ProductController : ControllerBase
 
         var updated = await productRepository_.UpdateAsync(already_existing);
         if (!updated)
-            return Conflict("The product was updated by someone else. Retry the request.");
+            return this.ApiProblem(StatusCodes.Status409Conflict, "The product was updated by someone else. Retry the request.");
 
         return NoContent();
 
@@ -80,8 +84,8 @@ public class ProductController : ControllerBase
         var result = await productRepository_.DeleteAsync(id);
         return result switch
         {
-            DeleteProductResult.NotFound => NotFound(),
-            DeleteProductResult.Assigned => Conflict("Product cannot be deleted while it is assigned to a user."),
+            DeleteProductResult.NotFound => this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found."),
+            DeleteProductResult.Assigned => this.ApiProblem(StatusCodes.Status409Conflict, "Product cannot be deleted while it is assigned to a user."),
             _ => NoContent()
         };
     }
