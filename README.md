@@ -67,12 +67,12 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ FluentValidation on all input models
 - ✅ JWT authentication (register/login) with hashed passwords (PBKDF2 + salt + `FixedTimeEquals` comparison resistant to timing attacks)
 - ✅ Refresh token rotation: the database stores a SHA-256 hash, reuse of a revoked token ends that user's sessions, and a session cannot be refreshed after 7 days
-- ✅ Rate limiting on authentication endpoints (5 requests/min per IP) to mitigate brute-force attacks
+- ✅ Rate limiting on register, login, and refresh (5 requests/min per IP) to mitigate brute-force attacks
 - ✅ Stock changes only through assignment and unassignment. A conditional database update rejects a sale when stock is no longer available, and `RowVersion` rejects a conflicting product edit with HTTP 409
 - ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`). Page number and page size are at least 1, and page size is at most 50. `GET /api/user` uses the same page shape
 - ✅ Redis-backed caching for product reads. The list key includes a version, so a write is visible on the next read, and a cache failure falls back to the database
 - ✅ Structured logging via Serilog (console sink, per-request request/response logging)
-- ✅ Health check endpoint (`/health`) for container orchestration and uptime monitoring
+- ✅ Health check endpoint (`/health`) for the database, and Redis when it is configured
 - ✅ Swagger UI with JWT Bearer authorization support
 - ✅ Dockerized development stack with persistent SQLite data and Redis cache
 - ✅ Production Docker Compose stack with PostgreSQL + Redis, including container healthchecks
@@ -131,7 +131,7 @@ dotnet run --project WebAPI
 
 `Admin:Password` is read from user-secrets or environment variables. A value placed in `appsettings.json` is ignored. In Production the password is read only from the `Admin__Password` environment variable. If either value is missing, startup skips the admin account and writes a warning. Registration cannot set `Role`; the seeded account is the admin.
 
-The API is available at `http://localhost:5080/swagger` (the port may vary — check the console output). In `Development`, the app syncs the SQLite schema automatically on startup.
+The API is available at `http://localhost:5080/swagger` (the port may vary — check the console output). Startup applies the EF Core migrations to SQLite. If a `sqlite.db` file was created before that change, delete it once. The old file has no `__EFMigrationsHistory` table, so migration cannot update it. Generate a new migration with `ASPNETCORE_ENVIRONMENT=Production` so the snapshot stays on PostgreSQL.
 
 ### Running with Docker
 
@@ -158,7 +158,7 @@ docker compose up --build -d
 docker compose down
 ```
 
-The development stack uses SQLite (`webapi-data` volume mounted at `/app/data`) and Redis for caching.
+The development stack uses SQLite (`webapi-data` volume mounted at `/app/data`) and Redis for caching. Startup applies the same EF Core migrations as PostgreSQL. A volume created by the older `EnsureCreated` startup needs to be removed once: `docker compose down -v`.
 
 ### Production Stack
 
@@ -179,11 +179,13 @@ ADMIN_PASSWORD=<password>
 
 `ADMIN_PASSWORD` is required only when the production stack should seed an admin account. The API does not read that password from `appsettings`.
 
-The production stack applies EF Core migrations automatically on startup and uses container healthchecks to ensure the API only starts once PostgreSQL and Redis are ready.
+PostgreSQL gets the same migrations on startup. The connection string comes from `ConnectionStrings__DefaultConnection`; `appsettings.Production.json` leaves that value empty.
 
 ## API Documentation
 
-Full interactive documentation is available via Swagger UI (`/swagger`) once the app is running (Development only). Key endpoints:
+Full interactive documentation is available via Swagger UI (`/swagger`) once the app is running (Development only). `POST /api/auth/register` is the only public way to create an account. `POST /api/user` creates an account for an administrator.
+
+Key endpoints:
 
 | Method | Route | Description | Auth Required |
 |---|---|---|---|

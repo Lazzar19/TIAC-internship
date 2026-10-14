@@ -1,6 +1,7 @@
 ﻿namespace WebAPI.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,7 +21,9 @@ public static class DatabaseExtensions
         {
             if (string.Equals(environmentName, Environments.Development, StringComparison.OrdinalIgnoreCase))
             {
-                options.UseSqlite(connectionString);
+                options.UseSqlite(connectionString)
+                    .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+                // The migration snapshot is the PostgreSQL model. SQLite reports that same model as pending because identity and timestamp types differ by provider.
             }
             else
             {

@@ -138,14 +138,8 @@ using Serilog;
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var providerName = dbContext.Database.ProviderName;
-        if (providerName == "Microsoft.EntityFrameworkCore.Sqlite")
-        {
-            dbContext.Database.EnsureCreated();
-        } else if(providerName != "Microsoft.EntityFrameworkCore.InMemory")
-        {
+        if (dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
             dbContext.Database.Migrate();
-        }
 
         await AdminUserSeeder.SeedAsync(
             scope.ServiceProvider,
