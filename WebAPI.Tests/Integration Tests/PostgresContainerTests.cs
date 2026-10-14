@@ -70,10 +70,7 @@ public class PostgresContainerTests
     private static async Task<AssignProductResult> AssignAsync(DbContextOptions<ApplicationDbContext> options, int userId, int productId)
     {
         await using var db = new ApplicationDbContext(options);
-        IDistributedCache cache = new MemoryDistributedCache(
-            Options.Create(new MemoryDistributedCacheOptions()),
-            NullLoggerFactory.Instance);
-        var repository = new UserProductRepository(db, new ProductRepository(db, cache));
+        var repository = new UserProductRepository(db);
         return await repository.AssignAsync(userId, productId, 1);
     }
 }

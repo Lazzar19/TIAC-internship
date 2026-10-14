@@ -38,12 +38,12 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 
 | Layer | Contains | Depends on |
 |---|---|---|
-| **Domain** | Entities (`Product`, `User`, `UserProduct`, `RefreshToken`) — pure business model | Nothing (no references) |
-| **Application** | DTOs, interfaces (`IProductRepository`, etc.), FluentValidation validators, mappings | Domain |
-| **Infrastructure** | `ApplicationDbContext`, concrete repository implementations, `TokenService`, password hashing, Redis cache integration | Application + Domain |
+| **Domain** | Entities (`Product`, `User`, `UserProduct`, `RefreshToken`) and `Role` | Nothing (no references) |
+| **Application** | DTOs, query parameters, validators, repository interfaces, and services for assignment, session revocation, and product cache coordination | Domain |
+| **Infrastructure** | `ApplicationDbContext`, repositories, `TokenService`, password hashing, and the Redis cache | Application + Domain |
 | **Api** | Controllers, `Program.cs`, middleware, Swagger/JWT configuration, health checks, rate limiting | Everything else |
 
-**Why this structure:** swapping the underlying technology (e.g. SQLite → PostgreSQL) only requires changes within the Infrastructure layer. Business logic is testable independently of the database, since controllers depend on interfaces (`IProductRepository`) rather than concrete implementations — this allows mocking in unit tests without a real database.
+Controllers authorize the caller, call a service, and map the result to an HTTP status. Repositories run queries and `SaveChanges`. After a successful save, the service updates the product cache. Assignment and refresh-token revocation can be tested without HTTP. The conditional stock update stays in the repository because it is a database statement. Swapping SQLite for PostgreSQL stays inside Infrastructure.
 
 ## Tech Stack
 
@@ -65,6 +65,7 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ Repository pattern with interfaces (testability, swappable implementations)
 - ✅ DTOs separated by purpose (`Create`, `Update`, read-only `Dto`) — prevents leaking internal/sensitive fields (e.g. `PasswordHash`) and prevents clients from setting server-generated fields (`Id`, `CreatedAt`)
 - ✅ FluentValidation on all input models
+- ✅ `GET /api/user/me` returns the user in the access token. The route does not take a user id
 - ✅ JWT authentication (register/login) with hashed passwords (PBKDF2 + salt + `FixedTimeEquals` comparison resistant to timing attacks)
 - ✅ Refresh token rotation: the database stores a SHA-256 hash, reuse of a revoked token ends that user's sessions, and a session cannot be refreshed after 7 days
 - ✅ Rate limiting on register, login, and refresh (5 requests/min per IP) to mitigate brute-force attacks
@@ -96,12 +97,13 @@ WebAPI/
 │   ├── appsettings.json
 │   └── appsettings.Production.json
 ├── WebAPI.Domain/                 # Domain layer
-│   └── (Product, User, UserProduct, RefreshToken)
+│   └── Entities/                  # Product, User, UserProduct, RefreshToken, Role
 ├── WebAPI.Application/            # Application layer
-│   ├── Dtos/
+│   ├── DTO/
 │   ├── Interfaces/
+│   ├── Services/
 │   ├── Validators/
-│   └── Mappings/
+│   └── Mapping/
 ├── WebAPI.Infrastructure/         # Infrastructure layer
 │   ├── Migrations/
 │   ├── ApplicationDbContext.cs
@@ -253,4 +255,4 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on eve
 - CORS policy configuration for browser-based clients
 - API versioning (`/api/v1/...`)
 - Soft delete for products and users, with audit history
-- Integration test coverage for the PostgreSQL and Redis production paths (currently exercised manually)
+- Redis is covered when the cache client throws; the compose stack itself is still checked by running it

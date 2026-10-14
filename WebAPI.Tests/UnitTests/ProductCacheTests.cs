@@ -16,9 +16,9 @@ public class ProductCacheTests
     public async Task GetAll_Sees_Name_And_Stock_Changes_Immediately()
     {
         await using var context = CreateContext();
-        var cache = CreateCache();
-        var products = new ProductRepository(context, cache, NullLogger<ProductRepository>.Instance);
-        var assignments = new UserProductRepository(context, products);
+        var cache = new ProductCache(CreateCache());
+        var products = new ProductService(new ProductRepository(context), cache);
+        var assignments = new AssignmentService(new UserProductRepository(context), cache);
 
         var product = new Product
         {
@@ -68,8 +68,8 @@ public class ProductCacheTests
         });
         await context.SaveChangesAsync();
 
-        var repository = new ProductRepository(context, new ThrowingDistributedCache(), NullLogger<ProductRepository>.Instance);
-        var page = await repository.GetAllAsync(new ProductQueryParameters());
+        var products = new ProductService(new ProductRepository(context), new ProductCache(new ThrowingDistributedCache(), NullLogger<ProductCache>.Instance));
+        var page = await products.GetAllAsync(new ProductQueryParameters());
 
         page.Items.Should().ContainSingle().Which.Name.Should().Be("Lamp");
     }

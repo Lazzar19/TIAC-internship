@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using WebAPI.Application;
-using WebAPI.Domain;
 
 namespace WebAPI.Application.Validators;
 

@@ -46,8 +46,7 @@ public class ProductRepositoryTests
         );
 
         await context.SaveChangesAsync();
-        IDistributedCache cache = new MemoryDistributedCache(new Microsoft.Extensions.Options.OptionsWrapper<Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions>(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions()));
-        var repository = new ProductRepository(context, cache);
+        var repository = new ProductRepository(context);
         var results = await repository.GetAllAsync(new ProductQueryParameters { PageNumber = 1, PageSize = 2 });
 
         results.Items.Should().HaveCount(2);
@@ -71,7 +70,7 @@ public class ProductRepositoryTests
         );
 
         await context.SaveChangesAsync();
-        var repository = new ProductRepository(context, CreateCache());
+        var repository = new ProductRepository(context);
         var results = await repository.GetAllAsync(new ProductQueryParameters { MinPrice = 10, MaxPrice = 100 });
         results.Items.Should().ContainSingle(c => c.Name == "Mid");
         
@@ -92,7 +91,7 @@ public class ProductRepositoryTests
         );
         
         await context.SaveChangesAsync();
-        var repository = new ProductRepository(context, CreateCache());
+        var repository = new ProductRepository(context);
         var results = await repository.GetAllAsync(new ProductQueryParameters { Search = "Laptop" });
         results.Items.Should().ContainSingle(c => c.Name == "Laptop");
     }

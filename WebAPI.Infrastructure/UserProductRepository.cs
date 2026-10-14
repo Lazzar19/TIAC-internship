@@ -8,11 +8,10 @@ using WebAPI.Domain;
 public class UserProductRepository: IUserProductRepository
 {
     private readonly ApplicationDbContext dbContext_;
-    private readonly IProductRepository _productRepository;
-    public UserProductRepository(ApplicationDbContext dbContext, IProductRepository productRepository)
+
+    public UserProductRepository(ApplicationDbContext dbContext)
     {
         dbContext_ = dbContext;
-        _productRepository = productRepository;
     }
 
     public async Task<IEnumerable<UserProduct>> GetByUserIDAsync(int userId)
@@ -54,7 +53,6 @@ public class UserProductRepository: IUserProductRepository
 
         dbContext_.UserProducts.Remove(userProduct);
         await dbContext_.SaveChangesAsync();
-        await _productRepository.InvalidateCacheAsync(userProduct.ProductID);
         return true;
     }
 
@@ -109,7 +107,6 @@ public class UserProductRepository: IUserProductRepository
             return AssignProductResult.Conflict;
         }
 
-        await _productRepository.InvalidateCacheAsync(productId);
         return AssignProductResult.Success;
     }
 
@@ -153,7 +150,6 @@ public class UserProductRepository: IUserProductRepository
             return AssignProductResult.Conflict;
         }
 
-        await _productRepository.InvalidateCacheAsync(productId);
         return AssignProductResult.Success;
     }
 
@@ -172,7 +168,6 @@ public class UserProductRepository: IUserProductRepository
 
         await AdjustStockAsync(userProduct.ProductID, userProduct.NumberOfProducts, requireAvailable: null);
         await transaction.CommitAsync();
-        await _productRepository.InvalidateCacheAsync(userProduct.ProductID);
         return true;
     }
 

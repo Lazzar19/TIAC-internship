@@ -1,4 +1,6 @@
-﻿namespace WebAPI.Domain;
+using WebAPI.Domain;
+
+namespace WebAPI.Application;
 
 public class ProductQueryParameters
 {
@@ -16,10 +18,8 @@ public class ProductQueryParameters
         get => pageSize_;
         set => pageSize_ = PageLimits.PageSize(value);
     }
-    
-    public string? Search { get; set;  }
-    public decimal? MinPrice { get; set;  }
-    public decimal? MaxPrice { get; set;  }
-    
-    
+
+    public string? Search { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
 }

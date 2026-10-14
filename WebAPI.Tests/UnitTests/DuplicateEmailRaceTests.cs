@@ -38,8 +38,8 @@ public class DuplicateEmailRaceTests
 
             tasks.Count(task => task.Status == TaskStatus.RanToCompletion).Should().Be(1);
             var failed = tasks.Single(task => task.IsFaulted);
-            var error = failed.Exception!.InnerExceptions.Should().ContainSingle().Subject.Should().BeOfType<DbUpdateException>().Subject;
-            UniqueConstraintViolation.Is(error).Should().BeTrue();
+            var error = failed.Exception!.InnerExceptions.Should().ContainSingle().Subject.Should().BeOfType<EmailAlreadyExistsException>().Subject;
+            UniqueConstraintViolation.Is((DbUpdateException)error.InnerException!).Should().BeTrue();
         }
         finally
         {
@@ -57,10 +57,7 @@ public class DuplicateEmailRaceTests
         command.CommandText = "PRAGMA busy_timeout = 5000;";
         await command.ExecuteNonQueryAsync();
 
-        var cache = new Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache(
-            Microsoft.Extensions.Options.Options.Create(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions()),
-            Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
-        var repository = new UserRepository(db, new ProductRepository(db, cache));
+        var repository = new UserRepository(db);
         await repository.AddAsync(new User
         {
             Username = "ana",

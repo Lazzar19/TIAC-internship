@@ -1,15 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using WebAPI.Application;
 using WebAPI.Application.Interfaces;
-using WebAPI.Application.Validators;
 using WebAPI.Authorization;
 
 namespace WebAPI.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Domain;
-using WebAPI.Infrastructure;
 
 
 [ApiController]
@@ -21,13 +18,19 @@ public class UserController : ControllerBase
 
     private readonly IUserRepository userRepository_;
     private readonly IPasswordHasher passwordHasher_;
-    private readonly IRefreshTokenRepository refreshTokenRepository_;
-    
-    public UserController(IUserRepository userRepository, IPasswordHasher passwordHasher, IRefreshTokenRepository refreshTokenRepository)
+    private readonly SessionService sessionService_;
+    private readonly UserAccountService userAccountService_;
+
+    public UserController(
+        IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
+        SessionService sessionService,
+        UserAccountService userAccountService)
     {
         userRepository_ = userRepository;
         passwordHasher_ = passwordHasher;
-        refreshTokenRepository_ = refreshTokenRepository;
+        sessionService_ = sessionService;
+        userAccountService_ = userAccountService;
     }
 
 
@@ -92,7 +95,7 @@ public class UserController : ControllerBase
         {
             await userRepository_.AddAsync(newUser);
         }
-        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        catch (EmailAlreadyExistsException)
         {
             return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
@@ -126,7 +129,7 @@ public class UserController : ControllerBase
         {
             await userRepository_.UpdateAsync(alreadyExisting);
         }
-        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        catch (EmailAlreadyExistsException)
         {
             return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
@@ -152,8 +155,8 @@ public class UserController : ControllerBase
         
         user.PasswordHash = passwordHasher_.Hash(dto.NewPassword);
         
-        await  userRepository_.UpdateAsync(user);
-        await refreshTokenRepository_.RevokeAllByUserIdAsync(id);
+        await userRepository_.UpdateAsync(user);
+        await sessionService_.RevokeAsync(id);
         return NoContent();
     }
     
@@ -167,7 +170,7 @@ public class UserController : ControllerBase
         if (user is null)
             return this.ApiProblem(StatusCodes.Status404NotFound, "User was not found.");
 
-        await userRepository_.DeleteAsync(user);
+        await userAccountService_.DeleteAsync(user);
         return NoContent();
     }
     

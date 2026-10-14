@@ -17,8 +17,4 @@ public interface IProductRepository
     Task AddAsync(Product prod);
     Task<bool> UpdateAsync(Product prod);
     Task<DeleteProductResult> DeleteAsync(int id);
-
-    Task InvalidateCacheAsync(int productID);
-
-
 }

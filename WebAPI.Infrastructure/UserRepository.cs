@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using WebAPI.Application.Validators;
+using WebAPI.Application.Interfaces;
 
 namespace WebAPI.Infrastructure;
 
@@ -9,12 +9,10 @@ using WebAPI.Domain;
 public class UserRepository : IUserRepository
 {
     private readonly ApplicationDbContext dbContext_;
-    private readonly IProductRepository productRepository_;
-    
-    public UserRepository(ApplicationDbContext dbContext, IProductRepository productRepository)
+
+    public UserRepository(ApplicationDbContext dbContext)
     {
         dbContext_ = dbContext;
-        productRepository_ = productRepository;
     }
 
 
@@ -45,28 +43,38 @@ public class UserRepository : IUserRepository
     public async Task AddAsync(User user)
     {
         await dbContext_.Users.AddAsync(user);
-        await dbContext_.SaveChangesAsync();
+        try
+        {
+            await dbContext_.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        {
+            throw new EmailAlreadyExistsException(exception);
+        }
     }
 
     public async Task UpdateAsync(User user)
     {
         dbContext_.Users.Update(user);
-        await dbContext_.SaveChangesAsync();
+        try
+        {
+            await dbContext_.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        {
+            throw new EmailAlreadyExistsException(exception);
+        }
     }
 
-    public async Task DeleteAsync(User user)
+    public async Task<IReadOnlyList<int>> DeleteAsync(User user)
     {
-        if (dbContext_.Database.IsRelational())
-        {
-            await using var transaction = await dbContext_.Database.BeginTransactionAsync();
-            var productIds = await RestoreStockAndDeleteAsync(user);
-            await transaction.CommitAsync();
-            await InvalidateProductsAsync(productIds);
-            return;
-        }
+        if (!dbContext_.Database.IsRelational())
+            return await RestoreStockAndDeleteAsync(user);
 
-        var restoredProductIds = await RestoreStockAndDeleteAsync(user);
-        await InvalidateProductsAsync(restoredProductIds);
+        await using var transaction = await dbContext_.Database.BeginTransactionAsync();
+        var productIds = await RestoreStockAndDeleteAsync(user);
+        await transaction.CommitAsync();
+        return productIds;
     }
 
     private async Task<List<int>> RestoreStockAndDeleteAsync(User user)
@@ -108,12 +116,6 @@ public class UserRepository : IUserRepository
         dbContext_.Users.Remove(user);
         await dbContext_.SaveChangesAsync();
         return productIds;
-    }
-
-    private async Task InvalidateProductsAsync(IEnumerable<int> productIds)
-    {
-        foreach (var productId in productIds)
-            await productRepository_.InvalidateCacheAsync(productId);
     }
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default)

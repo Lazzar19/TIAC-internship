@@ -1,5 +1,7 @@
-﻿namespace WebAPI.Application.Validators;
+﻿using WebAPI.Application;
 using WebAPI.Domain;
+
+namespace WebAPI.Application.Interfaces;
 
 public interface IUserRepository
 {
@@ -8,7 +10,6 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email);
     Task AddAsync(User user);
     Task UpdateAsync(User user);
-    Task DeleteAsync(User user);
+    Task<IReadOnlyList<int>> DeleteAsync(User user);
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken = default);
-
 }

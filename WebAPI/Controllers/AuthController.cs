@@ -1,17 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
 using WebAPI.Application.Interfaces;
-using WebAPI.Application.Validators;
 using WebAPI.Authorization;
-
 
 namespace WebAPI.Controllers;
 
 using WebAPI.Domain;
 using WebAPI.Application;
-using WebAPI.Infrastructure;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -22,15 +18,21 @@ public class AuthController : ControllerBase
     private readonly IUserRepository userRepository_;
     private readonly IPasswordHasher passwordHasher_;
     private readonly ITokenService tokenService_;
-    private readonly IRefreshTokenRepository  refreshTokenRepository_;
+    private readonly IRefreshTokenRepository refreshTokenRepository_;
+    private readonly SessionService sessionService_;
 
-
-    public AuthController(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, IRefreshTokenRepository refreshTokenRepository)
+    public AuthController(
+        IUserRepository userRepository,
+        IPasswordHasher passwordHasher,
+        ITokenService tokenService,
+        IRefreshTokenRepository refreshTokenRepository,
+        SessionService sessionService)
     {
         userRepository_ = userRepository;
         passwordHasher_ = passwordHasher;
         tokenService_ = tokenService;
         refreshTokenRepository_ = refreshTokenRepository;
+        sessionService_ = sessionService;
     }
 
 
@@ -52,7 +54,7 @@ public class AuthController : ControllerBase
         {
             await userRepository_.AddAsync(user);
         }
-        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        catch (EmailAlreadyExistsException)
         {
             return this.ApiProblem(StatusCodes.Status409Conflict, "Email already exists.");
         }
@@ -123,7 +125,7 @@ public class AuthController : ControllerBase
         if (!CurrentUser.TryGetId(User, out var userId))
             return this.ApiProblem(StatusCodes.Status401Unauthorized, "Authentication is required.");
 
-        await refreshTokenRepository_.RevokeAllByUserIdAsync(userId);
+        await sessionService_.RevokeAsync(userId);
 
         return NoContent();
     }

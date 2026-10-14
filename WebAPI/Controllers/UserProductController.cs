@@ -4,8 +4,6 @@ using WebAPI.Authorization;
 
 namespace WebAPI.Controllers;
 
-using WebAPI.Domain;
-
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -14,11 +12,11 @@ using Microsoft.AspNetCore.Mvc;
 public class UserProductController : ControllerBase
 {
 
-    private readonly IUserProductRepository userProductRepository_;
+    private readonly AssignmentService assignmentService_;
 
-    public UserProductController(IUserProductRepository userProductRepository)
+    public UserProductController(AssignmentService assignmentService)
     {
-        userProductRepository_ = userProductRepository;
+        assignmentService_ = assignmentService;
     }
 
 
@@ -30,7 +28,7 @@ public class UserProductController : ControllerBase
         if (denied is not null)
             return denied;
 
-        var items = await userProductRepository_.GetByUserIDAsync(userId);
+        var items = await assignmentService_.GetByUserIdAsync(userId);
         return Ok(items.Select(up => up.ToDTO()));
     }
 
@@ -46,7 +44,7 @@ public class UserProductController : ControllerBase
         if (denied is not null)
             return denied;
 
-        var result = await userProductRepository_.AssignAsync(userId, dto.ProductID, dto.Quantity);
+        var result = await assignmentService_.AssignAsync(userId, dto.ProductID, dto.Quantity);
 
         switch (result)
         {
@@ -59,7 +57,7 @@ public class UserProductController : ControllerBase
             case AssignProductResult.Conflict:
                 return this.ApiProblem(StatusCodes.Status409Conflict, "The product changed while assigning. Retry the request.");
         }
-        var userProduct = await userProductRepository_.GetAsync(userId, dto.ProductID);
+        var userProduct = await assignmentService_.GetAsync(userId, dto.ProductID);
         return Ok(userProduct!.ToDTO());
     }
 
@@ -72,11 +70,11 @@ public class UserProductController : ControllerBase
         if (denied is not null)
             return denied;
 
-        var existing = await userProductRepository_.GetAsync(userId, productID);
+        var existing = await assignmentService_.GetAsync(userId, productID);
         if (existing is null)
             return this.ApiProblem(StatusCodes.Status404NotFound, "Assignment was not found.");
 
-        var deleted = await userProductRepository_.DeleteAsync(existing);
+        var deleted = await assignmentService_.UnassignAsync(existing);
         if (!deleted)
             return this.ApiProblem(StatusCodes.Status404NotFound, "Assignment was not found.");
 

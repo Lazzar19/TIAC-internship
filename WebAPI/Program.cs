@@ -67,8 +67,13 @@ using Serilog;
 
 
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
+    builder.Services.AddScoped<IProductCache, ProductCache>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IUserProductRepository, UserProductRepository>();
+    builder.Services.AddScoped<ProductService>();
+    builder.Services.AddScoped<AssignmentService>();
+    builder.Services.AddScoped<SessionService>();
+    builder.Services.AddScoped<UserAccountService>();
 
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();

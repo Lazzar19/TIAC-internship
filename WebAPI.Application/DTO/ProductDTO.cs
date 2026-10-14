@@ -1,4 +1,4 @@
-﻿namespace WebAPI.Domain;
+namespace WebAPI.Application;
 
 public class ProductDTO
 {
@@ -8,7 +8,4 @@ public class ProductDTO
     public decimal Price { get; set; }
     public int Stock { get; set; }
     public DateTime CreatedAt { get; set; }
-    
-    //public string Code { get; set; } = string.Empty;
-    
 }

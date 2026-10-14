@@ -5,24 +5,23 @@ namespace WebAPI.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Application;
-using WebAPI.Domain;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 public class ProductController : ControllerBase
 {
-    private readonly IProductRepository productRepository_;
+    private readonly ProductService productService_;
 
-    public ProductController(IProductRepository productRepository)
+    public ProductController(ProductService productService)
     {
-        productRepository_ = productRepository;
+        productService_ = productService;
     }
 
     [HttpGet]
     public async Task<ActionResult<PageResult<ProductDTO>>> GetAll([FromQuery] ProductQueryParameters queryParameters)
     {
-        var result = await productRepository_.GetAllAsync(queryParameters);
+        var result = await productService_.GetAllAsync(queryParameters);
 
         var DTOresult = new PageResult<ProductDTO>
         {
@@ -39,7 +38,7 @@ public class ProductController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ProductDTO>> GetById(int id)
     {
-        var prod = await productRepository_.GetByIDAsync(id);
+        var prod = await productService_.GetByIdAsync(id);
         if (prod is null)
             return this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found.");
 
@@ -52,7 +51,7 @@ public class ProductController : ControllerBase
     {
        var product = prodDTO.ToEntity();
         
-        await productRepository_.AddAsync(product);
+        await productService_.AddAsync(product);
         return CreatedAtAction(nameof(GetById), new { id = product.ID }, product.ToDTO());
         
     }
@@ -61,7 +60,7 @@ public class ProductController : ControllerBase
     [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<IActionResult> Put(int id, UpdateProductDTO prod)
     {
-        var already_existing = await productRepository_.GetByIDAsync(id);
+        var already_existing = await productService_.GetByIdAsync(id);
         if (already_existing is null)
             return this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found.");
         
@@ -69,7 +68,7 @@ public class ProductController : ControllerBase
         already_existing.Description = prod.Description;
         already_existing.Price = prod.Price;
 
-        var updated = await productRepository_.UpdateAsync(already_existing);
+        var updated = await productService_.UpdateAsync(already_existing);
         if (!updated)
             return this.ApiProblem(StatusCodes.Status409Conflict, "The product was updated by someone else. Retry the request.");
 
@@ -81,7 +80,7 @@ public class ProductController : ControllerBase
     [Authorize(Roles = CurrentUser.AdminRole)]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await productRepository_.DeleteAsync(id);
+        var result = await productService_.DeleteAsync(id);
         return result switch
         {
             DeleteProductResult.NotFound => this.ApiProblem(StatusCodes.Status404NotFound, "Product was not found."),

@@ -1,4 +1,4 @@
-﻿namespace WebAPI.Domain;
+namespace WebAPI.Domain;
 
 public class RefreshToken
 {

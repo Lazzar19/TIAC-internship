@@ -1,11 +1,5 @@
 ﻿namespace WebAPI.Domain;
 
-public enum Role
-{
-    User,
-    Admin
-}
-
 public class User
 {
     public int ID { get; set; }

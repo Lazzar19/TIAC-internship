@@ -1,4 +1,4 @@
-﻿namespace WebAPI.Domain;
+namespace WebAPI.Application;
 
 public class AssignProductToUserDTO
 {

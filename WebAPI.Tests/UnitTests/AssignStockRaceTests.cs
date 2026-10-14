@@ -60,8 +60,7 @@ public class AssignStockRaceTests
     private static async Task<AssignProductResult> AssignAsync(DbContextOptions<ApplicationDbContext> options, int userId)
     {
         await using var db = new ApplicationDbContext(options);
-        var cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()), NullLoggerFactory.Instance);
-        var repository = new UserProductRepository(db, new ProductRepository(db, cache));
+        var repository = new UserProductRepository(db);
         return await repository.AssignAsync(userId, productId: 1, quantity: 1);
     }
 
