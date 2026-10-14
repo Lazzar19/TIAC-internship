@@ -75,7 +75,7 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ Health check endpoint (`/health`) for the database, and Redis when it is configured
 - ✅ Swagger UI with JWT Bearer authorization support
 - ✅ Dockerized development stack with persistent SQLite data and Redis cache
-- ✅ Production Docker Compose stack with PostgreSQL + Redis, including container healthchecks
+- ✅ Docker Compose healthchecks for the API, PostgreSQL, and Redis. Redis has no published port and requires a password
 - ✅ CI/CD pipeline (build + test on every push, Docker image publish to GHCR on `main`)
 - ✅ 70+ unit and integration tests (validators, hashing, repository logic, full HTTP request/response flows)
 
@@ -140,11 +140,12 @@ The API is available at `http://localhost:5080/swagger` (the port may vary — c
 1. Create a `.env` file in the root folder:
 ```
 JWT_KEY=<random-string-at-least-32-characters>
+REDIS_PASSWORD=<redis-password>
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=<password>
 ```
 
-`ADMIN_EMAIL` and `ADMIN_PASSWORD` are optional. Without them the API starts and does not create an admin account.
+`REDIS_PASSWORD` is required. Compose refuses to start without it, and Redis does not publish a port. `ADMIN_EMAIL` and `ADMIN_PASSWORD` are optional. Without them the API starts and does not create an admin account. The API container is healthy when `GET /health` succeeds, which checks the database and Redis.
 
 2. Run:
 ```bash
@@ -158,7 +159,7 @@ docker compose up --build -d
 docker compose down
 ```
 
-The development stack uses SQLite (`webapi-data` volume mounted at `/app/data`) and Redis for caching. Startup applies the same EF Core migrations as PostgreSQL. A volume created by the older `EnsureCreated` startup needs to be removed once: `docker compose down -v`.
+The development stack uses SQLite (`webapi-data` volume mounted at `/app/data`) and Redis for caching. Startup applies the same EF Core migrations as PostgreSQL. A volume created by the older `EnsureCreated` startup needs to be removed once: `docker compose down -v`. Compose waits until Redis answers an authenticated ping, then until the API health check passes.
 
 ### Production Stack
 
@@ -172,14 +173,15 @@ Required environment variables:
 
 ```bash
 POSTGRES_PASSWORD=<strong-postgres-password>
+REDIS_PASSWORD=<redis-password>
 JWT_KEY=<random-string-at-least-32-characters>
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=<password>
 ```
 
-`ADMIN_PASSWORD` is required only when the production stack should seed an admin account. The API does not read that password from `appsettings`.
+`POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required. `ADMIN_PASSWORD` is required only when the production stack should seed an admin account. The API does not read that password from `appsettings`.
 
-PostgreSQL gets the same migrations on startup. The connection string comes from `ConnectionStrings__DefaultConnection`; `appsettings.Production.json` leaves that value empty.
+PostgreSQL gets the same migrations on startup. The connection string comes from `ConnectionStrings__DefaultConnection`; `appsettings.Production.json` leaves that value empty. Compose starts the API after PostgreSQL and Redis are healthy. The API container is healthy when `GET /health` succeeds. Redis stays on the compose network, with a password and no published port.
 
 ## API Documentation
 

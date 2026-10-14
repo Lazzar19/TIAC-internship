@@ -5,13 +5,14 @@
       dockerfile: Dockerfile
     container_name: webapi
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/webapi.db
-      - Redis__Configuration=redis:6379,abortConnect=false
+      - Redis__Configuration=redis:6379,password=${REDIS_PASSWORD:?REDIS_PASSWORD is required},abortConnect=false
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=WebAPI
       - Jwt__Audience=WebApiUsers
@@ -19,11 +20,24 @@
       - Admin__Password=${ADMIN_PASSWORD:-}
     volumes:
       - webapi-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
     container_name: webapi-redis
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     volumes:
       - redis-data:/data
 
