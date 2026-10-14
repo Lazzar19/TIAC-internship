@@ -107,7 +107,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
     }
 
     [Fact]
-    public async Task Create_User_With_Duplicate_Email_Should_Return_BadRequest()
+    public async Task Create_User_With_Duplicate_Email_Should_Return_Conflict()
     {
         var email = UniqueEmail();
         var createUserDto = new CreateUserDTO
@@ -130,7 +130,7 @@ public class UserControllerIntegrationTests: IClassFixture<CustomWebApplicationF
         
         var second = await TestClients.AsAdminAsync(_client, HttpMethod.Post, "/api/User", ToJsonContent(duplicateDto));
         
-        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]

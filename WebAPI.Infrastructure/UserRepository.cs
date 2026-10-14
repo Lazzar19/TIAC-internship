@@ -18,7 +18,26 @@ public class UserRepository : IUserRepository
     }
 
 
-    public async Task<IEnumerable<User>> GetAllAsync() => await dbContext_.Users.ToListAsync();
+    public async Task<PageResult<User>> GetAllAsync(int pageNumber, int pageSize)
+    {
+        pageNumber = PageLimits.PageNumber(pageNumber);
+        pageSize = PageLimits.PageSize(pageSize);
+
+        var query = dbContext_.Users.OrderBy(user => user.ID);
+        var count = await query.CountAsync();
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PageResult<User>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = count
+        };
+    }
     public async Task<User?> GetByIDAsync(int userID) =>  await dbContext_.Users.FindAsync(userID);
     public async Task<User?> GetByEmailAsync(string email) => 
         await dbContext_.Users.FirstOrDefaultAsync(u => u.Email == email);

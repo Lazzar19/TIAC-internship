@@ -51,7 +51,7 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - **Entity Framework Core 10 + SQLite / PostgreSQL** — ORM and databases (SQLite for development, PostgreSQL for production)
 - **FluentValidation** — declarative input validation
 - **JWT (JSON Web Tokens)** — authentication with access + refresh token rotation
-- **PBKDF2 (Rfc2898DeriveBytes)** — salted password hashing
+- **PBKDF2 (Rfc2898DeriveBytes)** — salted password hashing, 600,000 iterations, iteration count stored in the hash
 - **Redis** — distributed caching for hot reads, with version-based invalidation
 - **Serilog** — structured logging with per-request logging
 - **Swashbuckle / Swagger** — OpenAPI documentation
@@ -69,7 +69,7 @@ Dependencies flow in a single direction only — inner layers never depend on ou
 - ✅ Refresh token rotation: the database stores a SHA-256 hash, reuse of a revoked token ends that user's sessions, and a session cannot be refreshed after 7 days
 - ✅ Rate limiting on authentication endpoints (5 requests/min per IP) to mitigate brute-force attacks
 - ✅ Stock changes only through assignment and unassignment. A conditional database update rejects a sale when stock is no longer available, and `RowVersion` rejects a conflicting product edit with HTTP 409
-- ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`)
+- ✅ Pagination and filtering (`GET /api/product?pageNumber=1&pageSize=10&search=...&minPrice=...&maxPrice=...`). Page number and page size are at least 1, and page size is at most 50. `GET /api/user` uses the same page shape
 - ✅ Redis-backed caching for product reads. The list key includes a version, so a write is visible on the next read, and a cache failure falls back to the database
 - ✅ Structured logging via Serilog (console sink, per-request request/response logging)
 - ✅ Health check endpoint (`/health`) for container orchestration and uptime monitoring
@@ -196,7 +196,7 @@ Full interactive documentation is available via Swagger UI (`/swagger`) once the
 | `POST` | `/api/product` | Create a product | Yes (Admin) |
 | `PUT` | `/api/product/{id}` | Update name, description, and price. Stock is unchanged | Yes (Admin) |
 | `DELETE` | `/api/product/{id}` | Delete a product. 409 while any user still owns units | Yes (Admin) |
-| `GET` | `/api/user` | List users | Yes (Admin) |
+| `GET` | `/api/user` | List users (`pageNumber`, `pageSize`) | Yes (Admin) |
 | `GET` | `/api/user/me` | Current user from the access token | Yes |
 | `GET` | `/api/user/{id}` | User details | Yes (self or Admin) |
 | `POST` | `/api/user` | Create a user | Yes (Admin) |
@@ -219,7 +219,7 @@ The API uses **JWT Bearer** authentication with refresh token rotation. After a 
 
 After logout the access token stays valid until it expires (30 minutes). Logout revokes refresh tokens, so they can no longer extend the session.
 
-Passwords are stored exclusively as **PBKDF2 hashes** (100,000 iterations, HMAC-SHA256, 128-bit random salt per user) — never as plain text. Login and refresh endpoints are rate-limited to mitigate brute-force attacks.
+Passwords are stored exclusively as **PBKDF2 hashes** (HMAC-SHA256, 128-bit random salt per user) — never as plain text. New hashes use 600,000 iterations and store that count, so it can be raised later. Older `salt-subkey` hashes still verify at 100,000 iterations. A password must be 12 to 128 characters. Login and refresh endpoints are rate-limited to mitigate brute-force attacks.
 
 ## Testing
 

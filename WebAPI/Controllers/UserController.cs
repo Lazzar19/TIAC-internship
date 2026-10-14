@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using WebAPI.Application;
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
@@ -8,6 +9,7 @@ namespace WebAPI.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Domain;
+using WebAPI.Infrastructure;
 
 
 [ApiController]
@@ -31,10 +33,16 @@ public class UserController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = CurrentUser.AdminRole)]
-    public async Task<ActionResult<IEnumerable<UserDTO>>> GetAll()
+    public async Task<ActionResult<PageResult<UserDTO>>> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var users = await userRepository_.GetAllAsync();
-        return Ok(users.Select(u => u.ToDTO()));
+        var users = await userRepository_.GetAllAsync(pageNumber, pageSize);
+        return Ok(new PageResult<UserDTO>
+        {
+            Items = users.Items.Select(user => user.ToDTO()),
+            PageNumber = users.PageNumber,
+            PageSize = users.PageSize,
+            TotalCount = users.TotalCount
+        });
     }
 
     [HttpGet("me")]
@@ -74,7 +82,15 @@ public class UserController : ControllerBase
             PasswordHash = passwordHasher_.Hash(dto.Password) 
         };
 
-        await userRepository_.AddAsync(newUser);
+        try
+        {
+            await userRepository_.AddAsync(newUser);
+        }
+        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        {
+            return Conflict("Email already exists.");
+        }
+
         return CreatedAtAction(nameof(GetById), new { id = newUser.ID }, newUser.ToDTO());
     }
     
@@ -98,8 +114,16 @@ public class UserController : ControllerBase
 
         alreadyExisting.Username = dto.UserName;
         alreadyExisting.Email = dto.Email;
-        
-        await  userRepository_.UpdateAsync(alreadyExisting);
+
+        try
+        {
+            await userRepository_.UpdateAsync(alreadyExisting);
+        }
+        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        {
+            return Conflict("Email already exists.");
+        }
+
         return NoContent();
     }
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using WebAPI.Application.Interfaces;
 using WebAPI.Application.Validators;
 using WebAPI.Authorization;
@@ -10,6 +11,7 @@ namespace WebAPI.Controllers;
 
 using WebAPI.Domain;
 using WebAPI.Application;
+using WebAPI.Infrastructure;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -48,7 +50,15 @@ public class AuthController : ControllerBase
             PasswordHash = passwordHasher_.Hash(dto.Password)
         };
 
-        await userRepository_.AddAsync(user);
+        try
+        {
+            await userRepository_.AddAsync(user);
+        }
+        catch (DbUpdateException exception) when (UniqueConstraintViolation.Is(exception))
+        {
+            return Conflict("Email already exists.");
+        }
+
         return Ok(user.ToDTO());
 
     }

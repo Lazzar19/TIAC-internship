@@ -3,7 +3,7 @@ using WebAPI.Domain;
 
 public interface IUserRepository
 {
-    Task<IEnumerable<User>> GetAllAsync();
+    Task<PageResult<User>> GetAllAsync(int pageNumber, int pageSize);
     Task<User?> GetByIDAsync(int userID);
     Task<User?> GetByEmailAsync(string email);
     Task AddAsync(User user);
